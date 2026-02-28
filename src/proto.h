@@ -14,9 +14,13 @@
 typedef struct _GLProtoNode GLProtoNode;
 
 struct _GLProtoNode {
+  char *value;
   gchar *label;
   guint offset;
   guint length;
+  int start;
+  int end;
+  uint8_t malformed;
   GList *children;
 };
 
@@ -38,6 +42,8 @@ typedef struct {
   uint8_t *data;
   size_t length;
 
+  uint16_t frame_counter;
+
   gchar *summary_protocol;
   gchar *summary_info;
   gchar *summary_source;
@@ -47,5 +53,7 @@ typedef struct {
 
   GLProtoNode *root;
 } GLPacket;
+
+typedef void (*on_select_packet_cb)(GLPacket *pkt);
 
 #endif //GHOSTLAYER_PROTO_H

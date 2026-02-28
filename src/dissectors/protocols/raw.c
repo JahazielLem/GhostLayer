@@ -19,10 +19,20 @@ void raw_dissect_summary(GLPacket *packet) {
   packet->summary_dest = g_strdup("-");
 }
 
-void raw_dissect_full(GLPacket *pkt){
-  GLProtoNode *node =
-      gl_proto_node_new("Raw Payload", 0, pkt->length);
+void raw_dissect_full(GLPacket *packet){
+  char buffer[512];
+  sprintf(buffer, "Length: %zu", packet->length);
+  GLProtoNode *node = gl_proto_node_new(buffer, 0, packet->length, "");
 
-  gl_proto_node_add_child(pkt->root, node);
-  pkt->fully_dissected = TRUE;
+  gl_proto_node_add_child(packet->root, node);
+  packet->fully_dissected = TRUE;
 }
+
+GLDissector raw_dissector = {
+  .name = "RAW",
+  .long_name = "Raw Frame",
+  .can_handle = raw_can_handle,
+  .dissect_summary = raw_dissect_summary,
+  .dissect = raw_dissect_full
+};
+

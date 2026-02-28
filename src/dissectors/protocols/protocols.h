@@ -13,7 +13,4 @@
 #include "core/packet.h"
 #include "dissectors/dissector.h"
 
-void raw_dissect_full(GLPacket *pkt);
-void raw_dissect_summary(GLPacket *packet);
-gboolean raw_can_handle(const uint8_t *data, size_t len);
 #endif //GHOSTLAYER_PROTOCOLS_H

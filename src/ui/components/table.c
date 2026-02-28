@@ -28,6 +28,8 @@ typedef struct {
 
 static table_context_t table_context;
 
+static on_select_packet_cb table_select_cb = NULL;
+
 static char *get_timestamp_str(void) {
   static char timestamp[16];
   struct timespec ts;
@@ -37,6 +39,20 @@ static char *get_timestamp_str(void) {
   snprintf(timestamp, sizeof(timestamp), "%02d:%02d:%02d.%02ld", tm_info->tm_hour, tm_info->tm_min, tm_info->tm_sec,
            ts.tv_nsec / 1000);
   return timestamp;
+}
+
+static void table_on_row_select(GtkTreeSelection *selection, gpointer user_data) {
+  GtkTreeModel *model;
+  GtkTreeIter iter;
+
+  if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
+    gint index;
+    gtk_tree_model_get(model, &iter, COLUMN_INDEX, &index, -1);
+    GLPacket *pkt = g_list_nth_data(table_context.list, index);
+    if (pkt) {
+      table_select_cb(pkt);
+    }
+  }
 }
 
 
@@ -82,8 +98,9 @@ GtkWidget *main_layout_table_init(void) {
   column = gtk_tree_view_column_new_with_attributes("Protocol", renderer, "text", COLUMN_PROTOCOL, NULL);
   gtk_tree_view_append_column(GTK_TREE_VIEW(table_context.treeview), column);
 
-  // GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(table_context.treeview));
-  // gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
+  GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(table_context.treeview));
+  gtk_tree_selection_set_mode(selection, GTK_SELECTION_SINGLE);
+  g_signal_connect(selection, "changed", G_CALLBACK(table_on_row_select), NULL);
   return table_context.treeview;
 }
 
@@ -112,5 +129,5 @@ void table_add_item(GLPacket *packet) {
 }
 
 uint16_t table_get_item_count(void) { return table_context.count; }
-
 void table_switch_scroll(void) { table_context.scroll = !table_context.scroll; }
+void table_register_select_cb(on_select_packet_cb select_cb) { table_select_cb = select_cb; }

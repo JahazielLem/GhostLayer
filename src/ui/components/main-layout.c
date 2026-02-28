@@ -8,10 +8,12 @@
 #include "main-layout.h"
 #include "toolbar.h"
 #include "table.h"
+#include "tree-view.h"
 
 typedef struct {
   GtkWidget *toolbar;
   GtkWidget *table;
+  GtkWidget *treeview;
 } main_layout_context_t;
 
 static main_layout_context_t main_layout_context;
@@ -44,19 +46,6 @@ static void main_layout_menu(GtkApplication *app, gpointer user_data) {
   g_action_map_add_action(G_ACTION_MAP(app), G_ACTION(about_action));
 }
 
-static GtkWidget *main_layout_create_table_container() {
-  GtkWidget *container = gtk_scrolled_window_new(NULL, NULL);
-  gtk_widget_set_size_request(container, (DEFAULT_WIDTH * 0.4), (DEFAULT_HEIGHT * 0.5));
-  return container;
-}
-
-static GtkWidget *main_layout_create_details_container() {
-  GtkWidget *container = gtk_scrolled_window_new(NULL, NULL);
-  GtkWidget *vpaned_info = gtk_paned_new(GTK_ORIENTATION_VERTICAL);
-  gtk_container_add(GTK_CONTAINER(container), vpaned_info);
-  return container;
-}
-
 static void main_layout_create_containers(GtkApplication *app, gpointer user_data) {
   GtkWidget *window = user_data;
   GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
@@ -66,19 +55,31 @@ static void main_layout_create_containers(GtkApplication *app, gpointer user_dat
   gtk_box_pack_start(GTK_BOX(vbox), main_layout_context.toolbar, FALSE, FALSE, 0);
   gtk_toolbar_set_style(GTK_TOOLBAR(main_layout_context.toolbar), GTK_TOOLBAR_ICONS);
 
-  GtkWidget *split_layout = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
-  gtk_box_pack_start(GTK_BOX(vbox), split_layout, TRUE, TRUE, 0);
+  GtkWidget *vsplit_layout = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
+  gtk_box_pack_start(GTK_BOX(vbox), vsplit_layout, TRUE, TRUE, 0);
 
-  GtkWidget *container_table = main_layout_create_table_container();
-  GtkWidget *container_details = main_layout_create_details_container();
+  GtkWidget *container_table = gtk_scrolled_window_new(NULL, NULL);
+  gtk_widget_set_size_request(container_table, (DEFAULT_WIDTH * 0.4), (DEFAULT_HEIGHT * 0.5));
 
-  gtk_paned_pack1(GTK_PANED(split_layout), container_table, FALSE, FALSE);
-  gtk_paned_pack2(GTK_PANED(split_layout), container_details, TRUE, FALSE);
+  GtkWidget *container_details = gtk_scrolled_window_new(NULL, NULL);
+  GtkWidget *vpaned_info = gtk_paned_new(GTK_ORIENTATION_VERTICAL);
+  gtk_container_add(GTK_CONTAINER(container_details), vpaned_info);
+
+  gtk_paned_pack1(GTK_PANED(vsplit_layout), container_table, FALSE, FALSE);
+  gtk_paned_pack2(GTK_PANED(vsplit_layout), container_details, TRUE, FALSE);
 
   main_layout_context.table = main_layout_table_init();
+  main_layout_context.treeview = main_layout_treeview_init();
 
   GtkWidget *scroll_details = gtk_scrolled_window_new(NULL, NULL);
+  gtk_container_add(GTK_CONTAINER(scroll_details), main_layout_context.treeview);
+  gtk_widget_set_hexpand(scroll_details, FALSE);
+  gtk_widget_set_vexpand(scroll_details, TRUE);
+
   gtk_container_add(GTK_CONTAINER(container_table), main_layout_context.table);
+  gtk_paned_pack1(GTK_PANED(vpaned_info), scroll_details, TRUE, FALSE);
+  // gtk_paned_pack2(GTK_PANED(vpaned_info), window_context.hexdump_textview, TRUE, FALSE);
+  // gtk_box_pack_end(GTK_BOX(vbox), window_context.statusbar, FALSE, FALSE, 0);
 }
 
 void main_layout_init(GtkApplication *app, gpointer user_data) {

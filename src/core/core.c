@@ -8,6 +8,7 @@
 #include "core.h"
 #include "backend/backend.h"
 #include "ui/components/table.h"
+#include "ui/components/tree-view.h"
 #include "dissectors/dissector.h"
 #include "dissectors/protocols/protocols.h"
 #include <sparkcli/sparkcli.h>
@@ -30,8 +31,12 @@ static gboolean core_parser_data_cb(GIOChannel *source, GIOCondition condition, 
     buffer[len] = '\0';
     if (buffer[0] == 0x64 && buffer[1] == 0x83 && buffer[len - 2] == 0x64 && buffer[len - 1] == 0x69) {
 
-      GLPacket *item = gl_packet_new(buffer + 2, len -4);
-      raw_dissect_summary(item);
+      GLPacket *item = gl_packet_new(buffer + 2, len -4, table_get_item_count());
+
+      GLDissector *raw_dissector = gl_dissector_get("SPP");
+      if (raw_dissector != NULL) {
+        raw_dissector->dissect_summary(item);
+      }
       scli_log_info("Packet received. Length %d:", item->length);
       scli_hexdump16(item->data, item->length);
       table_add_item(item);
@@ -44,8 +49,31 @@ static gboolean core_parser_data_cb(GIOChannel *source, GIOCondition condition, 
   return TRUE;
 }
 
+static void core_dissect_data_cb(GLPacket *packet) {
+  scli_log_info("Packet to dissect. Length %d:", packet->length);
+  scli_hexdump16(packet->data, packet->length);
+
+  if (!packet) {return;}
+
+  main_layout_treeview_clear_records();
+
+  if (!packet->fully_dissected) {
+    GLDissector *d = gl_dissector_find(packet->data, packet->length);
+    if (d && d->dissect) {
+      d->dissect(packet);
+    }
+  }
+
+  if (!packet->root){return;}
+
+  treeview_add_proto_node(NULL, packet->root);
+
+  main_layout_treeview_expand();
+}
+
 void core_init(void) {
   tcp_engine_init(DEFAULT_PORT);
   tcp_engine_listen_async();
   tcp_engine_register_read_cb(core_parser_data_cb);
+  table_register_select_cb(core_dissect_data_cb);
 }

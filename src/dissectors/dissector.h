@@ -16,6 +16,7 @@ typedef struct _GLDissector GLDissector;
 
 struct _GLDissector {
   const char *name;
+  const char *long_name;
 
   gboolean (*can_handle)(const uint8_t *data, size_t len);
   void (*dissect_summary)(GLPacket *packet);
@@ -24,5 +25,7 @@ struct _GLDissector {
 
 void gl_dissector_register(GLDissector *dissector);
 GLDissector *gl_dissector_find(const uint8_t *data, size_t len);
+GLDissector *gl_dissector_get(const char *name);
+void gl_dissector_init_core(void);
 
 #endif //GHOSTLAYER_DISSECTOR_H

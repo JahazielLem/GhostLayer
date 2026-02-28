@@ -11,9 +11,9 @@
 #include <gtk/gtk.h>
 #include "proto.h"
 
-
 GtkWidget *main_layout_table_init(void);
 void table_add_item(GLPacket *item);
 uint16_t table_get_item_count(void);
 void table_switch_scroll(void);
+void table_register_select_cb(on_select_packet_cb select_cb);
 #endif //GHOSTLAYER_TABLE_H

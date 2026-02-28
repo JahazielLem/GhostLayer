@@ -11,10 +11,10 @@
 #include <glib.h>
 #include "proto.h"
 
-GLPacket *gl_packet_new(const uint8_t *data, size_t length);
+GLPacket *gl_packet_new(const uint8_t *data, size_t length, uint16_t frame_counter);
 void gl_packet_free(GLPacket *pkt);
 
-GLProtoNode *gl_proto_node_new(char *label, guint offset, guint length);
+GLProtoNode *gl_proto_node_new(char *label, guint offset, guint length, char *value);
 void gl_proto_node_add_child(GLProtoNode *parent, GLProtoNode *child);
 void gl_proto_node_free(GLProtoNode *node);
 
