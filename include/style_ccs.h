@@ -1,5 +1,5 @@
 /**
- * @file src/main.c
+ * @file include/style_ccs.h
  * @brief PROJECT
  *
  * DESCRIPTION
@@ -10,11 +10,9 @@
  * @copyright Copyright (c) 2026 kevin Leon
  * @contact kevinleon.morales@gmail.com
  */
-#include <ccsds.h>
-#include "../include/main_gui.h"
+#ifndef GHOSTLAYER_STYLE_CCS_H
+#define GHOSTLAYER_STYLE_CCS_H
 
-int main(int argc, char *argv[]) {
-  register_dissectors();
-  dissector_parser_register();
-  return gui_main(argc, argv);
-}
+const char *stylesheet = "";
+
+#endif //GHOSTLAYER_STYLE_CCS_H

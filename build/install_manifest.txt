@@ -1,0 +1,8 @@
+/usr/local/lib/libccsds.a
+/usr/local/include/spp/spp.h
+/usr/local/include/ccsds.h
+/usr/local/include/version.h.in
+/usr/local/include/common.h
+/usr/local/include/spp_config.h
+/usr/local/lib/cmake/ccsds/ccsdsConfig.cmake
+/usr/local/lib/cmake/ccsds/ccsdsConfig-noconfig.cmake
