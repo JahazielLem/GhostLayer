@@ -46,6 +46,10 @@ static void toolbar_on_packet_sender(GtkWidget *widget, gpointer user_data) {
   packet_sender_dialog_create(widget, user_data);
 }
 
+static void toolbar_on_intruder(void) {
+  intruder_gui_create();
+}
+
 GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
   (void)widget;
 
@@ -54,6 +58,7 @@ GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
 
   toolbar_context.iface = gtk_tool_button_new(NULL, "iFace");
   toolbar_context.handle_connection = gtk_tool_button_new(NULL, "Connection Handler");
+  toolbar_context.intruder = gtk_tool_button_new(NULL, "Intruder");
   toolbar_context.packet_sender = gtk_tool_button_new(NULL, "Packet Sender");
 
   gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(toolbar_context.iface), "network-transmit-symbolic");
@@ -65,6 +70,10 @@ GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
   gtk_widget_set_sensitive(GTK_WIDGET(toolbar_context.handle_connection), TRUE);
   g_signal_connect(toolbar_context.handle_connection, "clicked", G_CALLBACK(toolbar_on_iface_handler), window);
 
+  gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(toolbar_context.intruder), "media-playlist-repeat-symbolic");
+  gtk_widget_set_tooltip_text(GTK_WIDGET(toolbar_context.intruder), "Intruder");
+  g_signal_connect(toolbar_context.intruder, "clicked", G_CALLBACK(toolbar_on_intruder), NULL);
+
   gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(toolbar_context.packet_sender), "mail-send-symbolic");
   gtk_widget_set_tooltip_text(GTK_WIDGET(toolbar_context.packet_sender), "CCSDS Packet Sender");
   g_signal_connect(toolbar_context.packet_sender, "clicked", G_CALLBACK(toolbar_on_packet_sender), window);
@@ -72,6 +81,7 @@ GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.iface), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.handle_connection), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar),  gtk_separator_tool_item_new(), -1);
+  gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.intruder), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.packet_sender), -1);
 
   return toolbar;

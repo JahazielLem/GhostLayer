@@ -449,7 +449,7 @@ void intruder_gui_create(void) {
 
   intruder_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title(GTK_WINDOW(intruder_window), "Intruder");
-  gtk_window_set_default_size(GTK_WINDOW(intruder_window), (gint)(APPLICATION_MIN_WIDTH * 1.2), (gint)(APPLICATION_MIN_HEIGHT * 1.2));
+  gtk_window_set_default_size(GTK_WINDOW(intruder_window), (gint)(APPLICATION_MIN_WIDTH * 0.7), (gint)APPLICATION_MIN_HEIGHT);
   gtk_window_set_position(GTK_WINDOW(intruder_window), GTK_WIN_POS_CENTER);
 
   g_signal_connect(intruder_window, "destroy", G_CALLBACK(intruder_gui_delete_instance), NULL);
@@ -460,7 +460,7 @@ void intruder_gui_create(void) {
   gtk_widget_set_name(intruder_window, "intruder_window");
   gtk_widget_show_all(intruder_window);
 
-  gtk_paned_set_position(GTK_PANED(main_layout), (gint)(APPLICATION_MIN_WIDTH * 1.2) / 2);
+  gtk_paned_set_position(GTK_PANED(main_layout), (gint)(APPLICATION_MIN_WIDTH * 0.7) / 2);
 }
 
 GtkWidget *intruder_gui_get_instance(void) { return intruder_window; }

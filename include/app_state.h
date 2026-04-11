@@ -15,6 +15,12 @@
 
 #include "bridge.h"
 
+typedef struct {
+  uint32_t frequency;
+  uint16_t bandwidth;
+  uint16_t spread_factor;
+} app_radio_config_t;
+
 gboolean app_state_server_get_state(void);
 void app_state_server_set_port(int port);
 int app_state_server_get_port(void);
@@ -23,4 +29,5 @@ void app_state_server_set_state(gboolean state);
 void app_state_server_cleanup(void);
 void app_state_new_packet(char *protocol, char *information, uint8_t *buffer, int length);
 void app_state_transmit_packet(void);
+void app_state_transmit_packet_with_config(uint8_t *payload, uint16_t payload_length);
 #endif //GHOSTLAYER_APP_STATE_H

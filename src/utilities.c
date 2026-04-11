@@ -201,7 +201,7 @@ uint8_t *hex_string_to_uint8_buffer(const char *hex_data, int *out_length) {
     return NULL;
   }
 
-  size_t len = strlen(hex_data);
+  const size_t len = strlen(hex_data);
   int byte_count = 0;
   for (size_t i = 0; i < len; i++) {
     if (hex_data[i] != ' ')
@@ -276,4 +276,18 @@ char* validate_and_convert_to_hex(const char *input) {
   hex_out[len * 2] = '\0';
 
   return hex_out;
+}
+
+/* Manual free needed */
+uint8_t *ascii_to_uint8_buffer(const char *input, int *out_length) {
+  if (!input || !*input) {
+    *out_length = 0;
+    return NULL;
+  }
+  const size_t len = strlen(input);
+  *out_length = (int)len;
+
+  uint8_t *buffer = g_malloc(len);
+  memcpy(buffer, input, len);
+  return buffer;
 }

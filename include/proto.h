@@ -75,4 +75,5 @@ uint8_t *hex_string_to_uint8_buffer_token(const char *hex_data, int *out_length)
 uint8_t *hex_string_to_uint8_buffer(const char *hex_data, int *out_length);
 char *get_timestamp_str(void);
 char* validate_and_convert_to_hex(const char *input);
+uint8_t *ascii_to_uint8_buffer(const char *input, int *out_length);
 #endif //GHOSTLAYER_PROTO_H
