@@ -16,6 +16,7 @@
 
 GtkWidget *entry_spp_apid;
 GtkWidget *combo_type;
+GtkWidget *combo_sechdr_flag;
 GtkWidget *combo_seq_flag;
 
 void plugin_spp_parse_packet(uint8_t *buffer, int length) {
@@ -74,6 +75,18 @@ GtkWidget *plugin_spp_crafter_create(void) {
   gtk_combo_box_set_active(GTK_COMBO_BOX(combo_type), 0);
   gtk_grid_attach(GTK_GRID(grid), lbl_type, 0, current_row, 1, 1);
   gtk_grid_attach(GTK_GRID(grid), combo_type, 1, current_row, 1, 1);
+  current_row++;
+
+  GtkWidget *lbl_sechdr_flag = gtk_label_new("<b>Secondary Header Flag</b>");
+  gtk_label_set_use_markup(GTK_LABEL(lbl_sechdr_flag), TRUE);
+  gtk_widget_set_halign(lbl_sechdr_flag, GTK_ALIGN_START);
+
+  combo_sechdr_flag = gtk_combo_box_text_new();
+  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo_sechdr_flag), NULL, "No Present (0x0)");
+  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo_sechdr_flag), NULL, "Present (0x1)");
+  gtk_combo_box_set_active(GTK_COMBO_BOX(combo_sechdr_flag), 0);
+  gtk_grid_attach(GTK_GRID(grid), lbl_sechdr_flag, 0, current_row, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), combo_sechdr_flag, 1, current_row, 1, 1);
   current_row++;
 
   GtkWidget *lbl_seq_flag = gtk_label_new("<b>Sequence Flag</b>");

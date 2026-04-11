@@ -42,6 +42,7 @@ GtkWidget *packet_hexdump_create(void);
 /* Dialogs */
 void about_dialog_create(GtkApplication *app, gpointer user_data);
 void iface_dialog_create(GtkWidget *widget, gpointer data);
+void packet_sender_dialog_create(GtkWidget *widget, gpointer data);
 void intruder_gui_create(void);
 
 /* Handlers */

@@ -33,8 +33,12 @@
   <component name="ChangeListManager">
     <list default="true" id="bb5b4064-3b87-4258-9dfa-a52b7c9266c9" name="Changes" comment="">
       <change afterPath="$PROJECT_DIR$/build/_deps/ccsds-src" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/gui/packet_sender_dialog.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/intruder_dialog.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/intruder_dialog.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/main_gui.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/main_gui.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/gui/main_gui.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/main_gui.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/gui/toolbar.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/toolbar.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/plugins/plugin_spp_crafter.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/plugins/plugin_spp_crafter.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -164,7 +168,7 @@
       <option name="presentableId" value="Default" />
       <updated>1775830136787</updated>
       <workItem from="1775830138765" duration="4530000" />
-      <workItem from="1775837758179" duration="35900000" />
+      <workItem from="1775837758179" duration="37997000" />
     </task>
     <servers />
   </component>

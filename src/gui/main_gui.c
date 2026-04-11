@@ -102,9 +102,6 @@ static void main_gui_create_main_window(GtkApplication *app, gpointer user_data)
   main_gui_menu_create(app, window);
   main_gui_layout_create(app, window);
   gtk_widget_show_all(window);
-
-  // TODO: Remove this line after test
-  intruder_gui_create();
 }
 
 int gui_main(int argc, char *argv[]) {
