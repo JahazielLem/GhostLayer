@@ -244,3 +244,36 @@ char *get_timestamp_str(void) {
            ts.tv_nsec / 1000);
   return timestamp;
 }
+
+char* validate_and_convert_to_hex(const char *input) {
+  if (!input || !*input) return NULL;
+
+  const char *p = input;
+  while (isspace((unsigned char)*p)) p++;
+  if (p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) p += 2;
+
+  gboolean is_hex = TRUE;
+  int digit_count = 0;
+
+  for (const char *tmp = p; *tmp; tmp++) {
+    if (isspace((unsigned char)*tmp)) continue;
+    if (!isxdigit((unsigned char)*tmp)) {
+      is_hex = FALSE;
+      break;
+    }
+    digit_count++;
+  }
+
+  if (is_hex && digit_count > 0) {
+    return g_strdup(p);
+  }
+
+  const size_t len = strlen(input);
+  char *hex_out = g_malloc(len * 2 + 1);
+  for (size_t i = 0; i < len; i++) {
+    sprintf(hex_out + (i * 2), "%02X", (unsigned char)input[i]);
+  }
+  hex_out[len * 2] = '\0';
+
+  return hex_out;
+}

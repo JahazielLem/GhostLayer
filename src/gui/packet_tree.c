@@ -69,11 +69,6 @@ GtkWidget *packet_details_create(void) {
                                                COLUMN_BG_COLOR, "foreground", COLUMN_TXT_COLOR, NULL);
   gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), col_name);
 
-  // GtkTreeViewColumn *col_value =
-  //     gtk_tree_view_column_new_with_attributes("", renderer, "text", COLUMN_FIELD_VALUE, "cell-background",
-  //                                              COLUMN_BG_COLOR, "foreground", COLUMN_TXT_COLOR, NULL);
-  // gtk_tree_view_append_column(GTK_TREE_VIEW(treeview), col_value);
-
   gtk_tree_view_expand_all(GTK_TREE_VIEW(treeview));
   g_signal_connect(treeview, "cursor-changed", G_CALLBACK(packet_details_on_selection), NULL);
   return treeview;

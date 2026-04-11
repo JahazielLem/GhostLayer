@@ -50,9 +50,9 @@ static void dissector_packet_details(proto_packet_t *pkt) {
   if (dissector_radio == NULL) {
     dissector_radio = proto_get_dissector_by_name("SPP");
   }
-  g_print("%s\n", uint8_buffer_to_hex_string(pkt->buffer,pkt->length));
 
   if (dissector_radio != NULL) {
+    g_print("%s\n", uint8_buffer_to_hex_string(pkt->buffer,pkt->length));
     packet_details_clear();
     dissector_radio->dissect_data(pkt, NULL, pkt->buffer);
     packet_hexdump_update(pkt->buffer,pkt->length);

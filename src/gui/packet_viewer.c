@@ -45,6 +45,7 @@ static void packet_viewer_on_row_select(GtkTreeSelection *selection, gpointer us
 }
 
 static void on_send_to_intruder(GtkMenuItem *item, gpointer user_data) {
+  (void)item;
   GtkWidget *treeview = GTK_WIDGET(user_data);
   GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
   GtkTreeModel *model;
@@ -56,7 +57,7 @@ static void on_send_to_intruder(GtkMenuItem *item, gpointer user_data) {
     proto_packet_t *pkt = g_list_nth_data(list_packet_buffer, index);
     if (pkt) {
       g_print("Proto\n");
-      intruder_gui_inspect_packet(pkt);
+      intruder_inspect_packet(pkt);
     }
   }
 }

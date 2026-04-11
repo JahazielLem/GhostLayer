@@ -22,5 +22,5 @@ void app_state_server_init(int port);
 void app_state_server_set_state(gboolean state);
 void app_state_server_cleanup(void);
 void app_state_new_packet(char *protocol, char *information, uint8_t *buffer, int length);
-
+void app_state_transmit_packet(void);
 #endif //GHOSTLAYER_APP_STATE_H

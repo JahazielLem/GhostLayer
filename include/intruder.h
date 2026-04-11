@@ -13,4 +13,8 @@
 #ifndef GHOSTLAYER_INTRUDER_H
 #define GHOSTLAYER_INTRUDER_H
 
+/* Intruder Control */
+void intruder_inspect_packet(proto_packet_t *packet);
+proto_packet_t *intruder_get_packet_data(void);
+
 #endif //GHOSTLAYER_INTRUDER_H

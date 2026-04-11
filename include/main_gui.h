@@ -43,7 +43,7 @@ GtkWidget *packet_hexdump_create(void);
 void about_dialog_create(GtkApplication *app, gpointer user_data);
 void iface_dialog_create(GtkWidget *widget, gpointer data);
 void intruder_gui_create(void);
-void intruder_gui_inspect_packet(proto_packet_t *packet);
+
 /* Handlers */
 void statusbar_update_label_connection(gboolean state);
 void statusbar_update_label_packet_count(uint16_t packet_count);

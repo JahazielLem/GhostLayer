@@ -74,4 +74,5 @@ GString *generate_hexdump(uint8_t *buffer, int length);
 uint8_t *hex_string_to_uint8_buffer_token(const char *hex_data, int *out_length);
 uint8_t *hex_string_to_uint8_buffer(const char *hex_data, int *out_length);
 char *get_timestamp_str(void);
+char* validate_and_convert_to_hex(const char *input);
 #endif //GHOSTLAYER_PROTO_H

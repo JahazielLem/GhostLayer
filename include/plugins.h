@@ -13,6 +13,11 @@
 #ifndef GHOSTLAYER_PLUGINS_H
 #define GHOSTLAYER_PLUGINS_H
 
-void plugin_spp_crafter_create(GtkWidget *parent);
+GtkWidget *plugin_spp_crafter_create(void);
 void plugin_spp_parse_packet(uint8_t *buffer, int length);
+
+void plugin_radio_create(GtkWidget *parent);
+uint32_t plugin_radio_get_frequency(void);
+uint16_t plugin_radio_get_bandwidth(void);
+uint16_t plugin_radio_get_spread_factor(void);
 #endif //GHOSTLAYER_PLUGINS_H
