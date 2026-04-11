@@ -15,9 +15,22 @@
 #include "../include/app_state.h"
 
 enum {
-  ATTACK_SNIPER = 0,
-  ATTACK_PITCHFORK = 1,
+  ATTACK_SERVICE_DISCOVERY = 0, // APID Sweep
+  ATTACK_SEQ_EXHAUSTION = 1,    // Counter Fuzzing
+  ATTACK_MANUAL_INJECTION = 2,  // Token based
 };
+
+typedef struct {
+  gint from;
+  gint to;
+  gint steps;
+} range_number_t;
+
+typedef struct {
+  GtkWidget *from;
+  GtkWidget *to;
+  GtkWidget *steps;
+} widget_range_number_t;
 
 static GtkWidget *hex_editor;
 static GtkWidget *tree_view;
@@ -28,7 +41,9 @@ static GtkWidget *payload_stack;
 static GtkListStore *list_store;
 static GtkWidget *intruder_window = NULL;
 
-proto_packet_t *user_packet;
+static proto_packet_t *user_packet;
+static range_number_t range_number_context = {0};
+static widget_range_number_t widget_range_number_context;
 
 static void intruder_gui_on_reset(void) {
   user_packet = intruder_get_packet_data();
@@ -42,7 +57,6 @@ static void intruder_gui_on_copy_token(void) {
 
 static void intruder_gui_on_send(void) {
   const int index = gtk_combo_box_get_active(GTK_COMBO_BOX(combo_attack));
-  if (index == ATTACK_SNIPER){}else{}
   // app_state_transmit_packet();
 }
 
@@ -156,15 +170,52 @@ static void intruder_gui_on_payload_add(GtkWidget *button, gpointer user_data) {
   }
 }
 
-static void intruder_gui_payload_create(GtkWidget *parent) {
+static GtkWidget *intruder_gui_number_rage_create(void) {
+  GtkWidget *num_grid = gtk_grid_new();
+  gtk_grid_set_row_spacing(GTK_GRID(num_grid), 8);
+  gtk_grid_set_column_spacing(GTK_GRID(num_grid), 15);
+  gtk_container_set_border_width(GTK_CONTAINER(num_grid), 10);
+
+  const char *labels[] = {"From:", "To:", "Step:"};
+  int i = 0;
+  GtkWidget *label_from = gtk_label_new("From");
+  gtk_widget_set_halign(label_from, GTK_ALIGN_START);
+  GtkAdjustment *adj_from = gtk_adjustment_new(0, 0, 1000000, 1, 10, 0);
+  widget_range_number_context.from = gtk_spin_button_new(adj_from, 1, 0);
+  gtk_widget_set_hexpand(widget_range_number_context.from, TRUE);
+  gtk_grid_attach(GTK_GRID(num_grid), label_from, 0, i, 1, 1);
+  gtk_grid_attach(GTK_GRID(num_grid), widget_range_number_context.from, 1, i, 1, 1);
+  i++;
+
+  GtkWidget *label_to = gtk_label_new("To");
+  gtk_widget_set_halign(label_to, GTK_ALIGN_START);
+  GtkAdjustment *adj_to = gtk_adjustment_new(0, 0, 1000000, 1, 10, 0);
+  widget_range_number_context.to = gtk_spin_button_new(adj_to, 1, 0);
+  gtk_widget_set_hexpand(widget_range_number_context.to, TRUE);
+  gtk_grid_attach(GTK_GRID(num_grid), label_to, 0, i, 1, 1);
+  gtk_grid_attach(GTK_GRID(num_grid), widget_range_number_context.to, 1, i, 1, 1);
+  i++;
+
+  GtkWidget *label_steps = gtk_label_new("Steps");
+  gtk_widget_set_halign(label_steps, GTK_ALIGN_START);
+  GtkAdjustment *adj_steps = gtk_adjustment_new(0, 1, 1000000, 1, 10, 0);
+  widget_range_number_context.steps = gtk_spin_button_new(adj_steps, 1, 0);
+  gtk_widget_set_hexpand(widget_range_number_context.steps, TRUE);
+  gtk_grid_attach(GTK_GRID(num_grid), label_steps, 0, i, 1, 1);
+  gtk_grid_attach(GTK_GRID(num_grid), widget_range_number_context.steps, 1, i, 1, 1);
+
+  return num_grid;
+}
+
+
+static GtkWidget *intruder_gui_payload_create(void) {
+  GtkWidget *main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
   GtkWidget *lbl_payloads = gtk_label_new("<b><span size='medium'>Payload Configuration</span></b>");
   gtk_label_set_use_markup(GTK_LABEL(lbl_payloads), TRUE);
   gtk_widget_set_halign(lbl_payloads, GTK_ALIGN_START);
-  gtk_box_pack_start(GTK_BOX(parent), lbl_payloads, FALSE, FALSE, 0);
-
+  gtk_box_pack_start(GTK_BOX(main_vbox), lbl_payloads, FALSE, FALSE, 0);
 
   GtkWidget *payload_main_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
-  gtk_widget_set_vexpand(payload_main_hbox, TRUE);
 
   GtkWidget *payload_btn_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
   GtkWidget *btn_payload_paste = gtk_button_new_with_label("Paste");
@@ -175,12 +226,12 @@ static void intruder_gui_payload_create(GtkWidget *parent) {
   gtk_box_pack_start(GTK_BOX(payload_btn_vbox), btn_payload_load, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(payload_btn_vbox), btn_payload_remove, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(payload_btn_vbox), btn_payload_clear, FALSE, FALSE, 0);
-
   gtk_box_pack_start(GTK_BOX(payload_main_hbox), payload_btn_vbox, FALSE, FALSE, 0);
 
   GtkWidget *scroll_list = gtk_scrolled_window_new(NULL, NULL);
   gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll_list), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
   gtk_widget_set_hexpand(scroll_list, TRUE);
+  gtk_widget_set_size_request(scroll_list, -1, 150);
 
   list_store = gtk_list_store_new(1, G_TYPE_STRING);
   tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(list_store));
@@ -195,7 +246,7 @@ static void intruder_gui_payload_create(GtkWidget *parent) {
   gtk_container_add(GTK_CONTAINER(scroll_list), tree_view);
   gtk_box_pack_start(GTK_BOX(payload_main_hbox), scroll_list, TRUE, TRUE, 0);
 
-  gtk_box_pack_start(GTK_BOX(parent), payload_main_hbox, TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(main_vbox), payload_main_hbox, TRUE, TRUE, 0);
 
   GtkWidget *add_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
   entry_add = gtk_entry_new();
@@ -205,88 +256,87 @@ static void intruder_gui_payload_create(GtkWidget *parent) {
   gtk_box_pack_start(GTK_BOX(add_hbox), entry_add, TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(add_hbox), btn_add, FALSE, FALSE, 0);
 
-  gtk_box_pack_start(GTK_BOX(parent), add_hbox, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(main_vbox), add_hbox, FALSE, FALSE, 0);
 
   g_signal_connect(btn_payload_paste, "clicked", G_CALLBACK(intruder_gui_on_payload_paste), list_store);
   g_signal_connect(btn_payload_load, "clicked", G_CALLBACK(intruder_gui_on_payload_load_from_file), list_store);
   g_signal_connect(btn_payload_remove, "clicked", G_CALLBACK(intruder_gui_on_payload_remove), list_store);
   g_signal_connect(btn_payload_clear, "clicked", G_CALLBACK(intruder_gui_on_payload_clear), list_store);
   g_signal_connect(btn_add, "clicked", G_CALLBACK(intruder_gui_on_payload_add), list_store);
+  return main_vbox;
 }
 
-static void on_payload_type_changed(GtkComboBox *combo, gpointer data) {
-    const gchar *id = gtk_combo_box_get_active_id(GTK_COMBO_BOX(combo));
-    if (id) {
-        gtk_stack_set_visible_child_name(GTK_STACK(payload_stack), id);
-    }
-}
-
-GtkWidget *create_pitchfork_config_ui(void) {
+static GtkWidget *intruder_gui_attack_discovery_apid_create(void) {
   GtkWidget *main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
   gtk_container_set_border_width(GTK_CONTAINER(main_vbox), 10);
 
-  GtkWidget *lbl_title = gtk_label_new("<b><span size='large'>Payloads</span></b>");
+  GtkWidget *lbl_title = gtk_label_new("<b><span size='large'>Discovery Attack (APID Sweep)</span></b>");
   gtk_label_set_use_markup(GTK_LABEL(lbl_title), TRUE);
   gtk_widget_set_halign(lbl_title, GTK_ALIGN_START);
   gtk_box_pack_start(GTK_BOX(main_vbox), lbl_title, FALSE, FALSE, 0);
 
-  GtkWidget *grid = gtk_grid_new();
-  gtk_grid_set_row_spacing(GTK_GRID(grid), 10);
-  gtk_grid_set_column_spacing(GTK_GRID(grid), 20);
-  gtk_box_pack_start(GTK_BOX(main_vbox), grid, FALSE, FALSE, 5);
+  GtkWidget *lbl_desc = gtk_label_new("Iterates through the Application Process Identifier (APID) range to map active services and identify the logical architecture of the satellite bus.");
+  gtk_label_set_line_wrap(GTK_LABEL(lbl_desc), TRUE);
+  gtk_widget_set_halign(lbl_desc, GTK_ALIGN_START);
+  gtk_box_pack_start(GTK_BOX(main_vbox), lbl_desc, FALSE, FALSE, 0);
 
-  int row = 0;
-
-  GtkWidget *lbl_set = gtk_label_new("Payload set:");
-  gtk_widget_set_halign(lbl_set, GTK_ALIGN_START);
-  GtkAdjustment *adj_set = gtk_adjustment_new(1, 1, 5, 1, 1, 0);
-  GtkWidget *spin_set = gtk_spin_button_new(adj_set, 1, 0);
-
-  gtk_grid_attach(GTK_GRID(grid), lbl_set, 0, row, 1, 1);
-  gtk_grid_attach(GTK_GRID(grid), spin_set, 1, row, 1, 1);
-  row++;
-
-  GtkWidget *lbl_type = gtk_label_new("Payload type:");
-  gtk_widget_set_halign(lbl_type, GTK_ALIGN_START);
-  GtkWidget *combo_type = gtk_combo_box_text_new();
-  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo_type), "list", "Simple List");
-  gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo_type), "numbers", "Numbers");
-  gtk_combo_box_set_active_id(GTK_COMBO_BOX(combo_type), "list");
-
-  gtk_grid_attach(GTK_GRID(grid), lbl_type, 0, row, 1, 1);
-  gtk_grid_attach(GTK_GRID(grid), combo_type, 1, row, 1, 1);
-
-  gtk_box_pack_start(GTK_BOX(main_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 5);
-
-  payload_stack = gtk_stack_new();
-  gtk_stack_set_transition_type(GTK_STACK(payload_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
-  gtk_box_pack_start(GTK_BOX(main_vbox), payload_stack, TRUE, TRUE, 0);
-
-  GtkWidget *list_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-  gtk_stack_add_named(GTK_STACK(payload_stack), list_vbox, "list");
-  /* Payloads */
-  intruder_gui_payload_create(list_vbox);
-
-  GtkWidget *num_grid = gtk_grid_new();
-  gtk_grid_set_row_spacing(GTK_GRID(num_grid), 8);
-  gtk_grid_set_column_spacing(GTK_GRID(num_grid), 15);
-  gtk_container_set_border_width(GTK_CONTAINER(num_grid), 10);
-
-  const char *labels[] = {"From:", "To:", "Step:"};
-  for(int i = 0; i < 3; i++) {
-    GtkWidget *lbl = gtk_label_new(labels[i]);
-    gtk_widget_set_halign(lbl, GTK_ALIGN_START);
-    GtkAdjustment *adj = gtk_adjustment_new(0, 0, 1000000, 1, 10, 0);
-    GtkWidget *spin = gtk_spin_button_new(adj, 1, 0);
-    gtk_widget_set_hexpand(spin, TRUE);
-    gtk_grid_attach(GTK_GRID(num_grid), lbl, 0, i, 1, 1);
-    gtk_grid_attach(GTK_GRID(num_grid), spin, 1, i, 1, 1);
-  }
-  gtk_stack_add_named(GTK_STACK(payload_stack), num_grid, "numbers");
-
-  g_signal_connect(combo_type, "changed", G_CALLBACK(on_payload_type_changed), NULL);
-
+  gtk_box_pack_start(GTK_BOX(main_vbox), intruder_gui_number_rage_create(), FALSE, FALSE, 0);
   return main_vbox;
+}
+
+static GtkWidget *intruder_gui_attack_sequence_exhaustion_create(void) {
+  GtkWidget *main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+  gtk_container_set_border_width(GTK_CONTAINER(main_vbox), 10);
+
+  GtkWidget *lbl_title = gtk_label_new("<b><span size='large'>Sequence Exhaustion (Counter Fuzzing)</span></b>");
+  gtk_label_set_use_markup(GTK_LABEL(lbl_title), TRUE);
+  gtk_widget_set_halign(lbl_title, GTK_ALIGN_START);
+  gtk_box_pack_start(GTK_BOX(main_vbox), lbl_title, FALSE, FALSE, 0);
+
+  GtkWidget *lbl_desc = gtk_label_new("Tests the robustness of the sequence counting mechanism by injecting packets with varying counter values to identify potential logic flaws or DoS vulnerabilities in packet reassembly.");
+  gtk_label_set_line_wrap(GTK_LABEL(lbl_desc), TRUE);
+  gtk_widget_set_halign(lbl_desc, GTK_ALIGN_START);
+  gtk_box_pack_start(GTK_BOX(main_vbox), lbl_desc, FALSE, FALSE, 0);
+
+  gtk_box_pack_start(GTK_BOX(main_vbox), intruder_gui_number_rage_create(), FALSE, FALSE, 0);
+  return main_vbox;
+}
+
+static GtkWidget *intruder_gui_attack_mutation_create(void) {
+  GtkWidget *main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+  gtk_container_set_border_width(GTK_CONTAINER(main_vbox), 10);
+
+  GtkWidget *lbl_title = gtk_label_new("<b><span size='large'>Bit-Flip Mutation (Payload Fuzzer)</span></b>");
+  gtk_label_set_use_markup(GTK_LABEL(lbl_title), TRUE);
+  gtk_widget_set_halign(lbl_title, GTK_ALIGN_START);
+  gtk_box_pack_start(GTK_BOX(main_vbox), lbl_title, FALSE, FALSE, 0);
+
+  GtkWidget *lbl_desc = gtk_label_new("Injects malformed data or targeted mutations into the packet payload using a predefined list to test command handling and data parsing integrity.");
+  gtk_label_set_line_wrap(GTK_LABEL(lbl_desc), TRUE);
+  gtk_widget_set_halign(lbl_desc, GTK_ALIGN_START);
+  gtk_box_pack_start(GTK_BOX(main_vbox), lbl_desc, FALSE, FALSE, 0);
+
+  gtk_box_pack_start(GTK_BOX(main_vbox), intruder_gui_payload_create(), FALSE, FALSE, 0);
+  return main_vbox;
+}
+
+static void on_attack_type_changed(GtkComboBox *combo, gpointer data) {
+  const int index = gtk_combo_box_get_active(combo);
+
+  switch (index) {
+    case ATTACK_SERVICE_DISCOVERY:
+      gtk_stack_set_visible_child_name(GTK_STACK(attack_stack), "discovery_page");
+      break;
+    case ATTACK_SEQ_EXHAUSTION:
+      gtk_stack_set_visible_child_name(GTK_STACK(attack_stack), "sequence_page");
+      break;
+    case ATTACK_MANUAL_INJECTION:
+      gtk_stack_set_visible_child_name(GTK_STACK(attack_stack), "mutation_page");
+      break;
+    default:
+      gtk_stack_set_visible_child_name(GTK_STACK(attack_stack), "discovery_page");
+      break;
+  }
 }
 
 static void intruder_gui_layout_left_panel(GtkWidget *split_layout) {
@@ -348,8 +398,9 @@ static void intruder_gui_layout_right_panel(GtkWidget *split_layout) {
   gtk_label_set_use_markup(GTK_LABEL(lbl_attack), TRUE);
   gtk_widget_set_halign(lbl_attack, GTK_ALIGN_START);
 
-  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Sniper (Manual Token)");
-  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Pitchfork (Targeted Payload)");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Discovery Attack    (APID Sweep)");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Sequence Exhaustion (Counter Fuzzing)");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Bit-Flip Mutation   (Payload Fuzzer)");
   gtk_combo_box_set_active(GTK_COMBO_BOX(combo_attack), 0);
 
   gtk_box_pack_start(GTK_BOX(attack_hbox), lbl_attack, FALSE, FALSE, 0);
@@ -358,17 +409,27 @@ static void intruder_gui_layout_right_panel(GtkWidget *split_layout) {
   gtk_box_pack_start(GTK_BOX(right_vbox), attack_hbox, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(right_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 5);
 
-  gtk_box_pack_start(GTK_BOX(right_vbox), plugin_spp_crafter_create(), TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(right_vbox), create_pitchfork_config_ui(), TRUE, TRUE, 0);
-
-  gtk_box_pack_start(GTK_BOX(right_vbox), attack_stack, TRUE, TRUE, 0);
-  gtk_paned_pack2(GTK_PANED(split_layout), right_vbox, TRUE, FALSE);
-
+  gtk_box_pack_start(GTK_BOX(right_vbox), plugin_spp_crafter_create(), FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(right_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 5);
 
+  attack_stack = gtk_stack_new();
+  gtk_stack_set_transition_type(GTK_STACK(attack_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
+
+  GtkWidget *discovery_box = intruder_gui_attack_discovery_apid_create();
+  GtkWidget *sequence_box = intruder_gui_attack_sequence_exhaustion_create();
+  GtkWidget *mutation_box = intruder_gui_attack_mutation_create();
+
+  gtk_stack_add_named(GTK_STACK(attack_stack), discovery_box, "discovery_page");
+  gtk_stack_add_named(GTK_STACK(attack_stack), sequence_box, "sequence_page");
+  gtk_stack_add_named(GTK_STACK(attack_stack), mutation_box, "mutation_page");
+
+  gtk_box_pack_start(GTK_BOX(right_vbox), attack_stack, TRUE, TRUE, 0);
+
+  gtk_box_pack_start(GTK_BOX(right_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 5);
   plugin_radio_create(right_vbox);
 
   gtk_paned_pack2(GTK_PANED(split_layout), right_vbox, TRUE, FALSE);
+  g_signal_connect(combo_attack, "changed", G_CALLBACK(on_attack_type_changed), NULL);
 }
 
 static GtkWidget *intruder_gui_layout_create(void) {
@@ -388,7 +449,7 @@ void intruder_gui_create(void) {
 
   intruder_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title(GTK_WINDOW(intruder_window), "Intruder");
-  gtk_window_set_default_size(GTK_WINDOW(intruder_window), (gint)(APPLICATION_MIN_WIDTH * 0.9), (gint)(APPLICATION_MIN_HEIGHT * 0.9));
+  gtk_window_set_default_size(GTK_WINDOW(intruder_window), (gint)(APPLICATION_MIN_WIDTH * 1.2), (gint)(APPLICATION_MIN_HEIGHT * 1.2));
   gtk_window_set_position(GTK_WINDOW(intruder_window), GTK_WIN_POS_CENTER);
 
   g_signal_connect(intruder_window, "destroy", G_CALLBACK(intruder_gui_delete_instance), NULL);
@@ -399,7 +460,7 @@ void intruder_gui_create(void) {
   gtk_widget_set_name(intruder_window, "intruder_window");
   gtk_widget_show_all(intruder_window);
 
-  gtk_paned_set_position(GTK_PANED(main_layout), (gint)(APPLICATION_MIN_WIDTH * 0.9) / 2);
+  gtk_paned_set_position(GTK_PANED(main_layout), (gint)(APPLICATION_MIN_WIDTH * 1.2) / 2);
 }
 
 GtkWidget *intruder_gui_get_instance(void) { return intruder_window; }

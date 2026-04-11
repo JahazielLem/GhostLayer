@@ -33,22 +33,8 @@
   <component name="ChangeListManager">
     <list default="true" id="bb5b4064-3b87-4258-9dfa-a52b7c9266c9" name="Changes" comment="">
       <change afterPath="$PROJECT_DIR$/build/_deps/ccsds-src" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/plugins/plugin_radio.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/app_state.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/app_state.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/intruder.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/intruder.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/main_gui.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/main_gui.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/plugins.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/plugins.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/proto.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/proto.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/style_ccs.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/style_ccs.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app_state.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/app_state.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dissector.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/dissector.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/gui/intruder_dialog.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/intruder_dialog.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/packet_tree.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/packet_tree.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/packet_viewer.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/packet_viewer.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/intruder.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/intruder.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/plugins/plugin_spp_crafter.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/plugins/plugin_spp_crafter.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utilities.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/utilities.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -178,7 +164,7 @@
       <option name="presentableId" value="Default" />
       <updated>1775830136787</updated>
       <workItem from="1775830138765" duration="4530000" />
-      <workItem from="1775837758179" duration="33018000" />
+      <workItem from="1775837758179" duration="35900000" />
     </task>
     <servers />
   </component>
