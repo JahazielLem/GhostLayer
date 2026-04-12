@@ -50,13 +50,13 @@ void app_state_server_cleanup(void) {
   if (bridge_engine_server_fd() >= 0){ bridge_engine_close(); }
 }
 
-void app_state_new_packet(char *protocol, char *information, uint8_t *buffer, const int length) {
-  packet_viewer_add(protocol, information, buffer, length);
+void app_state_new_packet(char *protocol, char *information, uint8_t *buffer, const int length, struct timeval *timestamp) {
+  packet_viewer_add(protocol, information, buffer, length, timestamp);
   statusbar_update_label_packet_count(packet_viewer_get_count());
 }
 
-void app_state_new_packet_from_file(uint8_t *buffer, const gsize buffer_len) {
-  dissector_packet_parser_from_file(buffer, buffer_len);
+void app_state_new_packet_from_file(uint8_t *buffer, const gsize buffer_len, struct timeval *timestamp) {
+  dissector_packet_parser_from_file(buffer, buffer_len, timestamp);
 }
 
 void app_state_clear_packet_viewer(void) {
@@ -127,3 +127,5 @@ void app_state_transmit_packet_with_config(uint8_t *payload, uint16_t payload_le
 
   bridge_engine_send(buffer, offset);
 }
+
+GList *app_sate_get_packet_list(void) { return packet_viewer_get_packet_list(); }

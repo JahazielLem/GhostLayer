@@ -32,24 +32,18 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5693bf0c-cb6a-4a4e-9cc8-dab1cfb6672e" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/include/pcap_loader.h" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/pcap_files.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.github/workflows/build.yml" beforeDir="false" afterPath="$PROJECT_DIR$/.github/workflows/build.yml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/CMakeLists.txt" beforeDir="false" afterPath="$PROJECT_DIR$/CMakeLists.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/include/app_state.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/app_state.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/bridge.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/bridge.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/include/dissectors.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/dissectors.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/intruder.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/intruder.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/include/main_gui.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/main_gui.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/plugins.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/plugins.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/pcap_loader.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/pcap_loader.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/proto.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/proto.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/app_state.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/app_state.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/dissector.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/dissector.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/intruder_dialog.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/intruder_dialog.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/gui/packet_viewer.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/packet_viewer.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/gui/toolbar.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/toolbar.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/intruder.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/intruder.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/plugins/plugin_radio.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/plugins/plugin_radio.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utilities.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/utilities.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/pcap_files.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/pcap_files.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -102,6 +96,7 @@
     "ModuleVcsDetector.initialDetectionPerformed": "true",
     "RunOnceActivity.RadMigrateCodeStyle": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
     "RunOnceActivity.cidr.known.project.marker": "true",
     "RunOnceActivity.git.unshallow": "true",
     "RunOnceActivity.readMode.enableVisualFormatting": "true",
@@ -174,7 +169,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1775955764094</updated>
-      <workItem from="1775955766388" duration="3137000" />
+      <workItem from="1775955766388" duration="5714000" />
     </task>
     <servers />
   </component>

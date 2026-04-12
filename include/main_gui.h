@@ -65,7 +65,7 @@ gint intruder_gui_get_range_from(gint attack_index);
 gint intruder_gui_get_range_to(gint attack_index);
 gint intruder_gui_get_range_steps(gint attack_index);
 
-void packet_viewer_add(const char *protocol, const char *information, const uint8_t *buffer, int length);
+void packet_viewer_add(const char *protocol, const char *information, const uint8_t *buffer, int length, struct timeval *timestamp);
 void packet_viewer_register_select_cb(packet_viewer_on_select_cb select_cb);
 void packet_viewer_clear(void);
 uint16_t packet_viewer_get_count(void);

@@ -185,13 +185,14 @@ GtkWidget *packet_viewer_create(void) {
   return gtk_treeview;
 }
 
-void packet_viewer_add(const char *protocol, const char *information, const uint8_t *buffer, int length) {
+void packet_viewer_add(const char *protocol, const char *information, const uint8_t *buffer, int length, struct timeval *timestamp) {
   GtkListStore *store = GTK_LIST_STORE(gtk_tree_view_get_model(GTK_TREE_VIEW(gtk_treeview)));
   GtkTreeIter iter;
 
   proto_packet_t *pkt = g_new0(proto_packet_t, 1);
   memcpy(pkt->buffer, buffer, length);
   pkt->length = length;
+  pkt->timestamp = *timestamp;
 
   list_packet_buffer = g_list_append(list_packet_buffer, pkt);
 

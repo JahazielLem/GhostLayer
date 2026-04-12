@@ -21,6 +21,7 @@
 typedef struct {
   int length;
   uint8_t buffer[512];
+  struct timeval timestamp;
 } proto_packet_t;
 
 typedef struct {

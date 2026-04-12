@@ -17,5 +17,6 @@
 
 
 void pcap_reader_open_file(const char*filename);
-void pcap_reader_dialog(GtkWidget *button, gpointer user_data);
+void pcap_reader_open_dialog(GtkWidget *button, gpointer user_data);
+void pcap_reader_save_dialog(GtkWidget *button, gpointer user_data);
 #endif //GHOSTLAYER_PCAP_LOADER_H

@@ -14,6 +14,7 @@
 #define GHOSTLAYER_APP_STATE_H
 
 #include "bridge.h"
+#include <sys/time.h>
 
 typedef struct {
   uint32_t frequency;
@@ -27,9 +28,10 @@ int app_state_server_get_port(void);
 void app_state_server_init(int port);
 void app_state_server_set_state(gboolean state);
 void app_state_server_cleanup(void);
-void app_state_new_packet(char *protocol, char *information, uint8_t *buffer, int length);
-void app_state_new_packet_from_file(uint8_t *buffer, gsize buffer_len);
+void app_state_new_packet(char *protocol, char *information, uint8_t *buffer, int length, struct timeval *timestamp);
+void app_state_new_packet_from_file(uint8_t *buffer, gsize buffer_len, struct timeval *timestamp);
 void app_state_clear_packet_viewer(void);
 void app_state_transmit_packet(void);
 void app_state_transmit_packet_with_config(uint8_t *payload, uint16_t payload_length);
+GList *app_sate_get_packet_list(void);
 #endif //GHOSTLAYER_APP_STATE_H

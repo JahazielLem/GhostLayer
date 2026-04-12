@@ -15,6 +15,10 @@
 
 #include <glib.h>
 
+#define BRIDGE_MAGIC_HEADER_1 0x64
+#define BRIDGE_MAGIC_HEADER_2 0x83
+#define BRIDGE_MAGIC_TAIL_1   0x64
+#define BRIDGE_MAGIC_TAIL_2   0x69
 #define BRIDGE_DEFAULT_PORT 5008
 
 typedef gboolean (*tcp_engine_read_callback)(GIOChannel *source, GIOCondition condition, gpointer user_data);

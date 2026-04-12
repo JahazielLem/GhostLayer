@@ -17,5 +17,5 @@
 
 proto_module_t *dissector_register_lora(void);
 proto_module_t *dissector_register_spp(void);
-void dissector_packet_parser_from_file(uint8_t *buffer, gsize buffer_len);
+void dissector_packet_parser_from_file(uint8_t *buffer, gsize buffer_len, struct timeval *timestamp);
 #endif //GHOSTLAYER_DISSECTORS_H

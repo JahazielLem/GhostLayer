@@ -22,6 +22,7 @@ typedef struct {
   GtkToolItem *packet_sender;
   GtkToolItem *export_file;
   GtkToolItem *load_pcap;
+  GtkToolItem *save_pcap;
 } toolbar_context_t;
 
 static toolbar_context_t toolbar_context;
@@ -53,7 +54,11 @@ static void toolbar_on_intruder(void) {
 }
 
 static void toolbar_on_load_pcap(GtkWidget *widget, gpointer user_data) {
-  pcap_reader_dialog(widget, user_data);
+  pcap_reader_open_dialog(widget, user_data);
+}
+
+static void toolbar_on_save_pcap(GtkWidget *widget, gpointer user_data) {
+  pcap_reader_save_dialog(widget, user_data);
 }
 
 GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
@@ -64,9 +69,10 @@ GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
 
   toolbar_context.iface = gtk_tool_button_new(NULL, "iFace");
   toolbar_context.handle_connection = gtk_tool_button_new(NULL, "Connection Handler");
+  toolbar_context.load_pcap = gtk_tool_button_new(NULL, "Load PCAP");
+  toolbar_context.save_pcap = gtk_tool_button_new(NULL, "Save PCAP");
   toolbar_context.intruder = gtk_tool_button_new(NULL, "Intruder");
   toolbar_context.packet_sender = gtk_tool_button_new(NULL, "Packet Sender");
-  toolbar_context.load_pcap = gtk_tool_button_new(NULL, "Load PCAP");
 
   gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(toolbar_context.iface), "network-transmit-symbolic");
   gtk_widget_set_tooltip_text(GTK_WIDGET(toolbar_context.iface), "Interface Configuration");
@@ -77,6 +83,14 @@ GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
   gtk_widget_set_sensitive(GTK_WIDGET(toolbar_context.handle_connection), TRUE);
   g_signal_connect(toolbar_context.handle_connection, "clicked", G_CALLBACK(toolbar_on_iface_handler), window);
 
+  gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(toolbar_context.load_pcap), "document-open");
+  gtk_widget_set_tooltip_text(GTK_WIDGET(toolbar_context.load_pcap), "Load PCAP");
+  g_signal_connect(toolbar_context.load_pcap, "clicked", G_CALLBACK(toolbar_on_load_pcap), window);
+
+  gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(toolbar_context.save_pcap), "document-save");
+  gtk_widget_set_tooltip_text(GTK_WIDGET(toolbar_context.save_pcap), "Save PCAP");
+  g_signal_connect(toolbar_context.save_pcap, "clicked", G_CALLBACK(toolbar_on_save_pcap), window);
+
   gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(toolbar_context.intruder), "media-playlist-repeat-symbolic");
   gtk_widget_set_tooltip_text(GTK_WIDGET(toolbar_context.intruder), "Intruder");
   g_signal_connect(toolbar_context.intruder, "clicked", G_CALLBACK(toolbar_on_intruder), NULL);
@@ -85,14 +99,11 @@ GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
   gtk_widget_set_tooltip_text(GTK_WIDGET(toolbar_context.packet_sender), "CCSDS Packet Sender");
   g_signal_connect(toolbar_context.packet_sender, "clicked", G_CALLBACK(toolbar_on_packet_sender), window);
 
-  gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(toolbar_context.load_pcap), "document-open");
-  gtk_widget_set_tooltip_text(GTK_WIDGET(toolbar_context.load_pcap), "Load PCAP");
-  g_signal_connect(toolbar_context.load_pcap, "clicked", G_CALLBACK(toolbar_on_load_pcap), window);
-
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.iface), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.handle_connection), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar),  gtk_separator_tool_item_new(), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.load_pcap), -1);
+  gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.save_pcap), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar),  gtk_separator_tool_item_new(), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.intruder), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.packet_sender), -1);

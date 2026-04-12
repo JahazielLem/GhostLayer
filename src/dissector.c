@@ -19,6 +19,15 @@ static proto_dissector_handle_t proto_dissector_table[PROTO_MAX_DISSECTORS];
 static int proto_dissector_count = 0;
 static proto_dissector_handle_t *dissector_radio = NULL;
 
+static void tvbuff_free(proto_tvbuff_t *tvb) {
+  if (tvb) {
+    if (tvb->real_data) {
+      free(tvb->real_data);
+    }
+    free(tvb);
+  }
+}
+
 static proto_tvbuff_t * tvbuff_init(uint8_t *data, uint16_t len) {
   int offset = 2; // Header
   proto_tvbuff_t *meta_buff = calloc(1, sizeof(proto_tvbuff_t));
@@ -82,17 +91,19 @@ static void dissector_packet_parser(uint8_t *buffer, const gsize buffer_len) {
   proto_tvbuff_t *tv_buffer = tvbuff_init(buffer, (uint16_t)buffer_len);
 
   if (dissector_radio != NULL) {
+    struct timeval current_time;
+    gettimeofday(&current_time, NULL);
     if (dissector_radio->is_valid(tv_buffer)) {
-      app_state_new_packet(dissector_radio->name, dissector_radio->description, tv_buffer->real_data, tv_buffer->length);
+      app_state_new_packet(dissector_radio->name, dissector_radio->description, tv_buffer->real_data, tv_buffer->length, &current_time);
     }else {
-      app_state_new_packet("RAW", "", tv_buffer->real_data, tv_buffer->length);
+      app_state_new_packet("RAW", "", tv_buffer->real_data, tv_buffer->length, &current_time);
     }
   }
 
-  g_free(tv_buffer->real_data);
+  tvbuff_free(tv_buffer);
 }
 
-void dissector_packet_parser_from_file(uint8_t *buffer, const gsize buffer_len) {
+void dissector_packet_parser_from_file(uint8_t *buffer, const gsize buffer_len, struct timeval *timestamp) {
   if (dissector_radio == NULL) {
     dissector_radio = proto_get_dissector_by_name("SPP");
   }
@@ -101,13 +112,13 @@ void dissector_packet_parser_from_file(uint8_t *buffer, const gsize buffer_len) 
 
   if (dissector_radio != NULL) {
     if (dissector_radio->is_valid(tv_buffer)) {
-      app_state_new_packet(dissector_radio->name, dissector_radio->description, tv_buffer->real_data, tv_buffer->length);
+      app_state_new_packet(dissector_radio->name, dissector_radio->description, tv_buffer->real_data, tv_buffer->length, timestamp);
     }else {
-      app_state_new_packet("RAW", "", tv_buffer->real_data, tv_buffer->length);
+      app_state_new_packet("RAW", "", tv_buffer->real_data, tv_buffer->length, timestamp);
     }
   }
 
-  g_free(tv_buffer->real_data);
+  tvbuff_free(tv_buffer);
 }
 
 static gboolean dissector_raw_data_cb(GIOChannel *source, GIOCondition condition, gpointer user_data) {
@@ -124,7 +135,7 @@ static gboolean dissector_raw_data_cb(GIOChannel *source, GIOCondition condition
   GIOStatus status = g_io_channel_read_chars(source, (gchar *) buffer, sizeof(buffer) -1, &len, &error);
   if (status == G_IO_STATUS_NORMAL && len > 0) {
     buffer[len] = '\0';
-    if (buffer[0] == 0x64 && buffer[1] == 0x83 && buffer[len - 2] == 0x64 && buffer[len - 1] == 0x69) {
+    if (buffer[0] == BRIDGE_MAGIC_HEADER_1 && buffer[1] == BRIDGE_MAGIC_HEADER_2 && buffer[len - 2] == BRIDGE_MAGIC_TAIL_1 && buffer[len - 1] == BRIDGE_MAGIC_TAIL_2) {
       dissector_packet_parser(buffer, len);
     }
   } else if (status == G_IO_STATUS_ERROR && error) {
