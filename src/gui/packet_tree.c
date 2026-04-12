@@ -11,7 +11,7 @@
  * @contact kevinleon.morales@gmail.com
  */
 
-#include "../../include/main_gui.h"
+#include "main_gui.h"
 
 enum {
   COLUMN_FIELD_NAME,

@@ -11,7 +11,7 @@
  * @contact kevinleon.morales@gmail.com
  */
 
-#include "../../include/main_gui.h"
+#include "main_gui.h"
 
 typedef struct {
   GtkWidget *label_connection;

@@ -64,6 +64,8 @@ gint intruder_gui_get_attack(void);
 gint intruder_gui_get_range_from(gint attack_index);
 gint intruder_gui_get_range_to(gint attack_index);
 gint intruder_gui_get_range_steps(gint attack_index);
+char *intruder_gui_get_data(void);
+GList *intruder_gui_get_payload_list(void);
 
 void packet_viewer_add(const char *protocol, const char *information, const uint8_t *buffer, int length, struct timeval *timestamp);
 void packet_viewer_register_select_cb(packet_viewer_on_select_cb select_cb);
@@ -83,4 +85,10 @@ void packet_hexdump_apply_hover_tag(int field_index);
 void packet_hexdump_clear_tag_field(void);
 void packet_hexdump_add_field_value(int packet_start, int packet_end);
 void packet_hexdump_update(uint8_t *buffer, int length);
+
+
+void fuzzer_gui_packet_viewer_cleanup(void);
+GtkWidget *fuzzer_gui_packet_viewer(void);
+void fuzzer_gui_packet_viewer_add_numeric_payload(uint32_t payload, uint8_t *buffer, int length);
+void fuzzer_gui_packet_viewer_add_list_payload(char *payload, uint8_t *buffer, int length);
 #endif //GHOSTLAYER_MAIN_GUI_H

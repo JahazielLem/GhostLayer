@@ -10,8 +10,8 @@
  * @copyright Copyright (c) 2026 kevin Leon
  * @contact kevinleon.morales@gmail.com
  */
-#include "../include/main_gui.h"
-#include "../include/app_state.h"
+#include "main_gui.h"
+#include "app_state.h"
 
 void iface_dialog_create(GtkWidget *widget, gpointer data) {
   (void)widget;

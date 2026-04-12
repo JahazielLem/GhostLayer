@@ -11,11 +11,11 @@
  * @contact kevinleon.morales@gmail.com
  */
 
-#include "../include/main_gui.h"
-#include "../include/bridge.h"
-#include "../include/plugins.h"
-#include "../include/app_state.h"
-#include "../include/dissectors.h"
+#include "main_gui.h"
+#include "bridge.h"
+#include "plugins.h"
+#include "app_state.h"
+#include "dissectors.h"
 
 static int server_port = BRIDGE_DEFAULT_PORT;
 static gboolean is_connected = FALSE;

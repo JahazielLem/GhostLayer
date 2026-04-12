@@ -11,9 +11,9 @@
  * @contact kevinleon.morales@gmail.com
  */
 
-#include "../include/main_gui.h"
-#include "../include/app_state.h"
-#include "../include/alerts.h"
+#include "main_gui.h"
+#include "app_state.h"
+#include "alerts.h"
 
 typedef struct {
   GtkWidget *hex_editor;

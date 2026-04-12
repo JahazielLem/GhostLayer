@@ -12,7 +12,7 @@
  */
 
 
-#include "../../include/main_gui.h"
+#include "main_gui.h"
 
 
 #define HEXDUMP_DATA_LEN_FORMAT (9)

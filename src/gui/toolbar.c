@@ -11,9 +11,9 @@
  * @contact kevinleon.morales@gmail.com
  */
 
-#include "../../include/main_gui.h"
-#include "../../include/app_state.h"
-#include "../../include/pcap_loader.h"
+#include "main_gui.h"
+#include "app_state.h"
+#include "pcap_loader.h"
 
 typedef struct {
   GtkToolItem *iface;

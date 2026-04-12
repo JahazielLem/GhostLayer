@@ -10,14 +10,13 @@
  * @copyright Copyright (c) 2026 kevin Leon
  * @contact kevinleon.morales@gmail.com
  */
-#include "../include/main_gui.h"
-#include "../include/plugins.h"
+#include "main_gui.h"
+#include "plugins.h"
 
 enum {
   SPP_CHANGED_SIGNAL,
   LAST_SIGNAL
 };
-
 
 GtkWidget *spin_spp_apid;
 GtkWidget *spin_spp_counter;
@@ -25,8 +24,7 @@ GtkWidget *combo_spp_type;
 GtkWidget *combo_spp_sechdr_flag;
 GtkWidget *combo_spp_seq_flag;
 
-space_packet_t space_packet;
-
+static space_packet_t space_packet;
 static guint spp_signals[LAST_SIGNAL] = { 0 };
 
 static void plugin_spp_on_change(GtkWidget *widget, gpointer user_data) {
@@ -38,12 +36,14 @@ static void plugin_spp_on_change(GtkWidget *widget, gpointer user_data) {
 void plugin_spp_parse_packet(uint8_t *buffer, int length) {
   if (spp_unpack_packet(&space_packet, buffer, length) == SPP_ERROR_NONE) {
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(spin_spp_apid), spp_get_apid(&space_packet));
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(spin_spp_counter), spp_get_sequence_count(&space_packet));
+
     gtk_combo_box_set_active(GTK_COMBO_BOX(combo_spp_type), spp_get_type(&space_packet));
     gtk_combo_box_set_active(GTK_COMBO_BOX(combo_spp_seq_flag), spp_get_sequence_flags(&space_packet));
   }
 }
 
-space_packet_t *plugin_spp_build_packet(uint8_t *buffer, uint16_t length) {
+space_packet_t *plugin_spp_build_packet(uint8_t*buffer, uint16_t length) {
   memset(&space_packet, 0, sizeof(space_packet_t));
   spp_apid_context_t counter = {0};
 
@@ -173,3 +173,13 @@ GtkWidget *plugin_spp_crafter_create(void) {
 
   return main_container;
 }
+
+gint plugin_spp_get_apid(void){ return gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spin_spp_apid)); }
+
+gint plugin_spp_get_seq_counter(void){ return gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spin_spp_counter)); }
+
+gint plugin_spp_get_type(void){ return gtk_combo_box_get_active(GTK_COMBO_BOX(combo_spp_type)); }
+
+gint plugin_spp_get_sechdr(void){ return gtk_combo_box_get_active(GTK_COMBO_BOX(combo_spp_sechdr_flag)); }
+
+gint plugin_spp_get_seq_flag(void){ return gtk_combo_box_get_active(GTK_COMBO_BOX(combo_spp_seq_flag)); }

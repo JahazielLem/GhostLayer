@@ -11,9 +11,9 @@
  * @contact kevinleon.morales@gmail.com
  */
 
-#include "../../include/main_gui.h"
-#include "../../include/bridge.h"
-#include "../../include/app_state.h"
+#include "main_gui.h"
+#include "bridge.h"
+#include "app_state.h"
 
 static proto_dissector_handle_t proto_dissector_table[PROTO_MAX_DISSECTORS];
 static int proto_dissector_count = 0;

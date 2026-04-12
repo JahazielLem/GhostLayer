@@ -11,7 +11,7 @@
  * @contact kevinleon.morales@gmail.com
  */
 
-#include "../include/proto.h"
+#include "proto.h"
 #include <ctype.h>
 #include <stdint.h>
 #include <stdio.h>

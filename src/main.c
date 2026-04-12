@@ -10,8 +10,7 @@
  * @copyright Copyright (c) 2026 kevin Leon
  * @contact kevinleon.morales@gmail.com
  */
-#include <ccsds.h>
-#include "../include/main_gui.h"
+#include "main_gui.h"
 
 int main(int argc, char *argv[]) {
   register_dissectors();

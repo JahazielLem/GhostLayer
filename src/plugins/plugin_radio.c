@@ -11,8 +11,8 @@
  * @contact kevinleon.morales@gmail.com
  */
 
-#include "../include/main_gui.h"
-#include "../include/plugins.h"
+#include "main_gui.h"
+#include "plugins.h"
 #include <arpa/inet.h>
 
 GtkWidget *spin_delay;

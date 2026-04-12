@@ -10,7 +10,7 @@
  * @copyright Copyright (c) 2026 kevin Leon
  * @contact kevinleon.morales@gmail.com
  */
-#include "../../include/alerts.h"
+#include "alerts.h"
 
 static GtkWidget *infobar_container;
 static GtkWidget *infobar_label;

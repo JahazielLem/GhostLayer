@@ -19,6 +19,12 @@ GtkWidget *plugin_spp_crafter_create(void);
 void plugin_spp_parse_packet(uint8_t *buffer, int length);
 space_packet_t *plugin_spp_build_packet(uint8_t *buffer, uint16_t length);
 
+gint plugin_spp_get_apid(void);
+gint plugin_spp_get_seq_counter(void);
+gint plugin_spp_get_type(void);
+gint plugin_spp_get_sechdr(void);
+gint plugin_spp_get_seq_flag(void);
+
 void plugin_radio_create(GtkWidget *parent);
 uint32_t plugin_radio_get_frequency(void);
 uint16_t plugin_radio_get_bandwidth(void);

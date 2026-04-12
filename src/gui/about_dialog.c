@@ -11,8 +11,8 @@
  * @contact kevinleon.morales@gmail.com
  */
 
-#include "../include/main_gui.h"
-#include "../include/version.h.in"
+#include "main_gui.h"
+#include "version.h.in"
 
 static void about_dialog_on_activate(GSimpleAction *action, GVariant *parameter, gpointer user_data) {
   (void)action;

@@ -11,9 +11,8 @@
  * @contact kevinleon.morales@gmail.com
  */
 
-#include "../include/main_gui.h"
-#include "../include/app_state.h"
-
+#include "main_gui.h"
+#include "app_state.h"
 
 typedef struct {
   GtkWidget *from;
@@ -54,6 +53,7 @@ static void intruder_gui_on_reset(void) {
   user_packet = intruder_get_packet_data();
 
   intruder_gui_hexeditor_update(user_packet->buffer, user_packet->length);
+  plugin_spp_parse_packet(user_packet->buffer, user_packet->length);
 }
 static void intruder_gui_on_copy_token(void) {
   GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
@@ -416,6 +416,8 @@ static void intruder_gui_layout_right_panel(GtkWidget *split_layout) {
 
   g_signal_connect(plugin_box, "spp-data-changed", G_CALLBACK(on_plugin_state_modified), NULL);
 
+  intruder_gui_on_payload_change(hex_buffer, NULL);
+
   attack_stack = gtk_stack_new();
   gtk_stack_set_transition_type(GTK_STACK(attack_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
 
@@ -465,6 +467,10 @@ void intruder_gui_create(void) {
   gtk_widget_show_all(intruder_window);
 
   gtk_paned_set_position(GTK_PANED(main_layout), (gint)(APPLICATION_MIN_WIDTH * 0.7) / 2);
+
+  while (gtk_events_pending()) {
+    gtk_main_iteration();
+  }
 }
 
 GtkWidget *intruder_gui_get_instance(void) { return intruder_window; }
@@ -482,3 +488,28 @@ gint intruder_gui_get_attack(void){ return gtk_combo_box_get_active(GTK_COMBO_BO
 gint intruder_gui_get_range_from(const gint attack_index){ return gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(attack_widgets[attack_index].from));}
 gint intruder_gui_get_range_to(const gint attack_index){ return gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(attack_widgets[attack_index].to));}
 gint intruder_gui_get_range_steps(const gint attack_index){ return gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(attack_widgets[attack_index].steps));}
+
+char *intruder_gui_get_data(void) {
+  GtkTextIter start, end;
+  gtk_text_buffer_get_bounds(hex_buffer, &start, &end);
+  return gtk_text_buffer_get_text(hex_buffer, &start, &end, FALSE);
+}
+
+GList *intruder_gui_get_payload_list(void) {
+  GList *list = NULL;
+  GtkTreeIter iter;
+  GtkTreeModel *model = GTK_TREE_MODEL(list_store);
+
+  gboolean valid = gtk_tree_model_get_iter_first(model, &iter);
+  while (valid) {
+    gchar *str_data = NULL;
+    gtk_tree_model_get(model, &iter, 0, &str_data, -1);
+    if (str_data != NULL) {
+      list = g_list_append(list, str_data);
+    }
+    valid = gtk_tree_model_iter_next(model, &iter);
+  }
+  return list;
+}
+
+

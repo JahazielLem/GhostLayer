@@ -11,9 +11,9 @@
  * @contact kevinleon.morales@gmail.com
  */
 #include <pcap.h>
-#include "../include/alerts.h"
-#include "../include/app_state.h"
-#include "../include/proto.h"
+#include "alerts.h"
+#include "app_state.h"
+#include "proto.h"
 
 typedef struct {
   int packet_count;

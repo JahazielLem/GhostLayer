@@ -19,7 +19,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include "../include/bridge.h"
+#include "bridge.h"
 
 #define BACKLOG 10
 

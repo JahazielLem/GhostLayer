@@ -10,8 +10,8 @@
  * @copyright Copyright (c) 2026 kevin Leon
  * @contact kevinleon.morales@gmail.com
  */
-#include "../include/main_gui.h"
-#include "../include/style_ccs.h"
+#include "main_gui.h"
+#include "style_ccs.h"
 
 typedef struct {
   GtkWidget *toolbar;
