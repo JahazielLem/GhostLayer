@@ -31,32 +31,7 @@
     </configurations>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5693bf0c-cb6a-4a4e-9cc8-dab1cfb6672e" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/gui/fuzzer_table.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/main_gui.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/main_gui.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/include/plugins.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/plugins.h" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/app_state.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/app_state.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/bridge.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/bridge.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/dissector.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/dissector.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/about_dialog.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/about_dialog.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/alerts.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/alerts.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/iface_dialog.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/iface_dialog.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/intruder_dialog.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/intruder_dialog.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/main_gui.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/main_gui.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/packet_hexdump.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/packet_hexdump.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/packet_sender_dialog.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/packet_sender_dialog.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/packet_tree.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/packet_tree.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/packet_viewer.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/packet_viewer.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/statusbar.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/statusbar.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/gui/toolbar.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/toolbar.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/intruder.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/intruder.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/main.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/pcap_files.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/pcap_files.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/plugins/plugin_radio.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/plugins/plugin_radio.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/plugins/plugin_spp_crafter.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/plugins/plugin_spp_crafter.c" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/utilities.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/utilities.c" afterDir="false" />
-    </list>
+    <list default="true" id="5693bf0c-cb6a-4a4e-9cc8-dab1cfb6672e" name="Changes" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -181,7 +156,7 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1775955764094</updated>
-      <workItem from="1775955766388" duration="17113000" />
+      <workItem from="1775955766388" duration="17679000" />
     </task>
     <servers />
   </component>
@@ -196,11 +171,6 @@
   <component name="XDebuggerManager">
     <breakpoint-manager>
       <breakpoints>
-        <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
-          <url>file://$PROJECT_DIR$/src/intruder.c</url>
-          <line>12</line>
-          <option name="timeStamp" value="4" />
-        </line-breakpoint>
         <line-breakpoint enabled="true" type="com.jetbrains.cidr.execution.debugger.OCBreakpointType">
           <url>file://$PROJECT_DIR$/src/gui/about_dialog.c</url>
           <line>13</line>
