@@ -23,4 +23,5 @@ void plugin_radio_create(GtkWidget *parent);
 uint32_t plugin_radio_get_frequency(void);
 uint16_t plugin_radio_get_bandwidth(void);
 uint16_t plugin_radio_get_spread_factor(void);
+gint plugin_radio_get_delay(void);
 #endif //GHOSTLAYER_PLUGINS_H

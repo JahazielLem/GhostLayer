@@ -13,6 +13,7 @@
 
 #include "../../include/main_gui.h"
 #include "../../include/app_state.h"
+#include "../../include/pcap_loader.h"
 
 typedef struct {
   GtkToolItem *iface;
@@ -20,6 +21,7 @@ typedef struct {
   GtkToolItem *intruder;
   GtkToolItem *packet_sender;
   GtkToolItem *export_file;
+  GtkToolItem *load_pcap;
 } toolbar_context_t;
 
 static toolbar_context_t toolbar_context;
@@ -50,6 +52,10 @@ static void toolbar_on_intruder(void) {
   intruder_gui_create();
 }
 
+static void toolbar_on_load_pcap(GtkWidget *widget, gpointer user_data) {
+  pcap_reader_dialog(widget, user_data);
+}
+
 GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
   (void)widget;
 
@@ -60,6 +66,7 @@ GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
   toolbar_context.handle_connection = gtk_tool_button_new(NULL, "Connection Handler");
   toolbar_context.intruder = gtk_tool_button_new(NULL, "Intruder");
   toolbar_context.packet_sender = gtk_tool_button_new(NULL, "Packet Sender");
+  toolbar_context.load_pcap = gtk_tool_button_new(NULL, "Load PCAP");
 
   gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(toolbar_context.iface), "network-transmit-symbolic");
   gtk_widget_set_tooltip_text(GTK_WIDGET(toolbar_context.iface), "Interface Configuration");
@@ -78,11 +85,18 @@ GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
   gtk_widget_set_tooltip_text(GTK_WIDGET(toolbar_context.packet_sender), "CCSDS Packet Sender");
   g_signal_connect(toolbar_context.packet_sender, "clicked", G_CALLBACK(toolbar_on_packet_sender), window);
 
+  gtk_tool_button_set_icon_name(GTK_TOOL_BUTTON(toolbar_context.load_pcap), "document-open");
+  gtk_widget_set_tooltip_text(GTK_WIDGET(toolbar_context.load_pcap), "Load PCAP");
+  g_signal_connect(toolbar_context.load_pcap, "clicked", G_CALLBACK(toolbar_on_load_pcap), window);
+
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.iface), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.handle_connection), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar),  gtk_separator_tool_item_new(), -1);
+  gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.load_pcap), -1);
+  gtk_toolbar_insert(GTK_TOOLBAR(toolbar),  gtk_separator_tool_item_new(), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.intruder), -1);
   gtk_toolbar_insert(GTK_TOOLBAR(toolbar), GTK_TOOL_ITEM(toolbar_context.packet_sender), -1);
+
 
   return toolbar;
 }

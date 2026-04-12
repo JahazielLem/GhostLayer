@@ -15,6 +15,7 @@
 #include "../include/plugins.h"
 #include <arpa/inet.h>
 
+GtkWidget *spin_delay;
 GtkWidget *spin_frequency;
 GtkWidget *combo_bandwidth;
 GtkWidget *combo_spread_factor;
@@ -40,6 +41,10 @@ uint16_t plugin_radio_get_spread_factor(void) {
   const long sf = strtol(text, &end, 10);
   g_free(text);
   return (uint16_t)sf;
+}
+
+gint plugin_radio_get_delay(void) {
+  return gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spin_delay));
 }
 
 void plugin_radio_create(GtkWidget *parent) {
@@ -94,6 +99,19 @@ void plugin_radio_create(GtkWidget *parent) {
 
   gtk_grid_attach(GTK_GRID(grid), lbl_spread_factor, 0, current_row, 1, 1);
   gtk_grid_attach(GTK_GRID(grid), combo_spread_factor, 1, current_row, 1, 1);
+  current_row++;
+
+  GtkWidget *lbl_delay = gtk_label_new("<b><span size='large'>Delay (seconds)</span></b>");
+  gtk_label_set_use_markup(GTK_LABEL(lbl_delay), TRUE);
+  gtk_widget_set_halign(lbl_delay, GTK_ALIGN_START);
+
+  GtkAdjustment *adj_delay = gtk_adjustment_new(5, 0, 100, 1, 1.0, 0.0);
+  spin_delay = gtk_spin_button_new(adj_delay, 1.0, 2);
+  gtk_widget_set_hexpand(spin_delay, TRUE);
+
+  gtk_grid_attach(GTK_GRID(grid), lbl_delay, 0, current_row, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), spin_delay, 1, current_row, 1, 1);
+  current_row++;
 
   gtk_box_pack_start(GTK_BOX(parent), grid, FALSE, FALSE, 0);
 

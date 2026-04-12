@@ -15,6 +15,7 @@
 #include "../include/bridge.h"
 #include "../include/plugins.h"
 #include "../include/app_state.h"
+#include "../include/dissectors.h"
 
 static int server_port = BRIDGE_DEFAULT_PORT;
 static gboolean is_connected = FALSE;
@@ -52,6 +53,14 @@ void app_state_server_cleanup(void) {
 void app_state_new_packet(char *protocol, char *information, uint8_t *buffer, const int length) {
   packet_viewer_add(protocol, information, buffer, length);
   statusbar_update_label_packet_count(packet_viewer_get_count());
+}
+
+void app_state_new_packet_from_file(uint8_t *buffer, const gsize buffer_len) {
+  dissector_packet_parser_from_file(buffer, buffer_len);
+}
+
+void app_state_clear_packet_viewer(void) {
+  packet_viewer_clear();
 }
 
 void app_state_transmit_packet(void) {

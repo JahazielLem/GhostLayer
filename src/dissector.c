@@ -37,6 +37,20 @@ static proto_tvbuff_t * tvbuff_init(uint8_t *data, uint16_t len) {
   return meta_buff;
 }
 
+static proto_tvbuff_t * tvbuff_init_from_file(uint8_t *data, uint16_t len) {
+  proto_tvbuff_t *meta_buff = calloc(1, sizeof(proto_tvbuff_t));
+  meta_buff->reported_length = len;
+  meta_buff->timestamp = get_timestamp_str();
+  meta_buff->length = len;
+  meta_buff->real_data = malloc(meta_buff->length);
+  if (meta_buff->real_data == NULL) {
+    g_print("Memory allocation failed!\n");
+    return NULL;
+  }
+  memcpy(meta_buff->real_data, data, meta_buff->length);
+  return meta_buff;
+}
+
 static proto_dissector_handle_t *proto_get_dissector_by_name(const char *name) {
   for (int i = 0; i < proto_dissector_count; i++) {
     if (strcmp(name, proto_dissector_table[i].name) == 0) {
@@ -60,12 +74,30 @@ static void dissector_packet_details(proto_packet_t *pkt) {
   }
 }
 
-static void dissector_packet_parser(uint8_t *buffer, gsize buffer_len) {
+static void dissector_packet_parser(uint8_t *buffer, const gsize buffer_len) {
   if (dissector_radio == NULL) {
     dissector_radio = proto_get_dissector_by_name("SPP");
   }
 
-  proto_tvbuff_t *tv_buffer = tvbuff_init(buffer, buffer_len);
+  proto_tvbuff_t *tv_buffer = tvbuff_init(buffer, (uint16_t)buffer_len);
+
+  if (dissector_radio != NULL) {
+    if (dissector_radio->is_valid(tv_buffer)) {
+      app_state_new_packet(dissector_radio->name, dissector_radio->description, tv_buffer->real_data, tv_buffer->length);
+    }else {
+      app_state_new_packet("RAW", "", tv_buffer->real_data, tv_buffer->length);
+    }
+  }
+
+  g_free(tv_buffer->real_data);
+}
+
+void dissector_packet_parser_from_file(uint8_t *buffer, const gsize buffer_len) {
+  if (dissector_radio == NULL) {
+    dissector_radio = proto_get_dissector_by_name("SPP");
+  }
+
+  proto_tvbuff_t *tv_buffer = tvbuff_init_from_file(buffer, (uint16_t)buffer_len);
 
   if (dissector_radio != NULL) {
     if (dissector_radio->is_valid(tv_buffer)) {

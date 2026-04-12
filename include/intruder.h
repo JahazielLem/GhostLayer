@@ -16,5 +16,6 @@
 /* Intruder Control */
 void intruder_inspect_packet(proto_packet_t *packet);
 proto_packet_t *intruder_get_packet_data(void);
+void intruder_send_attack(gint attack);
 
 #endif //GHOSTLAYER_INTRUDER_H

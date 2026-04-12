@@ -26,6 +26,13 @@
 #define APPLICATION_MIN_WIDTH (1280)
 #define APPLICATION_MIN_HEIGHT (720)
 
+enum {
+  ATTACK_SERVICE_DISCOVERY  = 0, // APID Sweep
+  ATTACK_SEQ_EXHAUSTION     = 1, // Counter Fuzzing
+  ATTACK_MANUAL_INJECTION   = 2, // Token based
+};
+
+
 typedef void (*packet_viewer_on_select_cb)(proto_packet_t *pkt);
 
 int gui_main(int argc, char *argv[]);
@@ -52,6 +59,11 @@ void statusbar_update_label_packet_count(uint16_t packet_count);
 GtkWidget *intruder_gui_get_instance(void);
 void intruder_gui_delete_instance(void);
 void intruder_gui_hexeditor_update(uint8_t *buffer, int length);
+
+gint intruder_gui_get_attack(void);
+gint intruder_gui_get_range_from(gint attack_index);
+gint intruder_gui_get_range_to(gint attack_index);
+gint intruder_gui_get_range_steps(gint attack_index);
 
 void packet_viewer_add(const char *protocol, const char *information, const uint8_t *buffer, int length);
 void packet_viewer_register_select_cb(packet_viewer_on_select_cb select_cb);

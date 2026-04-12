@@ -6,18 +6,18 @@ project(ghostlayer
         LANGUAGES C
 )
 
+if (APPLE)
+    set(ENV{PKG_CONFIG_PATH}
+            "/opt/homebrew/opt/libpcap/lib/pkgconfig:/opt/homebrew/lib/pkgconfig:$ENV{PKG_CONFIG_PATH}")
+endif()
+
 include(FetchContent)
-
-FetchContent_Declare(
-        ccsds
-        GIT_REPOSITORY https://github.com/JahazielLem/libccsds.git
-        GIT_TAG main
-)
-
+FetchContent_Declare(ccsds GIT_REPOSITORY https://github.com/JahazielLem/libccsds.git GIT_TAG main)
 FetchContent_MakeAvailable(ccsds)
 
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(GTK REQUIRED gtk+-3.0)
+pkg_check_modules(PCAP REQUIRED libpcap)
 
 execute_process(
         COMMAND git describe --tags --dirty --always
@@ -48,12 +48,14 @@ target_include_directories(ghostlayer
         ${CMAKE_CURRENT_SOURCE_DIR}/include
         ${CMAKE_BINARY_DIR}/generated
         ${GTK_INCLUDE_DIRS}
+        ${PCAP_INCLUDE_DIRS}
 )
 
 target_link_libraries(ghostlayer
         PRIVATE
         ccsds
         ${GTK_LIBRARIES}
+        ${PCAP_LIBRARIES}
 )
 
 target_compile_features(ghostlayer PRIVATE c_std_99)

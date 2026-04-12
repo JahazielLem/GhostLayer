@@ -14,17 +14,6 @@
 #include "../include/main_gui.h"
 #include "../include/app_state.h"
 
-enum {
-  ATTACK_SERVICE_DISCOVERY = 0, // APID Sweep
-  ATTACK_SEQ_EXHAUSTION = 1,    // Counter Fuzzing
-  ATTACK_MANUAL_INJECTION = 2,  // Token based
-};
-
-typedef struct {
-  gint from;
-  gint to;
-  gint steps;
-} range_number_t;
 
 typedef struct {
   GtkWidget *from;
@@ -37,13 +26,29 @@ static GtkWidget *tree_view;
 static GtkWidget *entry_add;
 static GtkWidget *combo_attack;
 static GtkWidget *attack_stack;
-static GtkWidget *payload_stack;
+static GtkTextBuffer *hex_buffer;
 static GtkListStore *list_store;
 static GtkWidget *intruder_window = NULL;
 
 static proto_packet_t *user_packet;
-static range_number_t range_number_context = {0};
-static widget_range_number_t widget_range_number_context;
+static widget_range_number_t attack_widgets[3];
+
+static void intruder_gui_on_payload_change(GtkTextBuffer *buffer, gpointer user_data);
+
+static void on_plugin_state_modified(void) {
+  intruder_gui_on_payload_change(hex_buffer, NULL);
+}
+
+static void intruder_gui_on_payload_change(GtkTextBuffer *buffer, gpointer user_data) {
+  (void)user_data;
+  GtkTextIter start, end;
+  gtk_text_buffer_get_bounds(buffer, &start, &end);
+  const char *text = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
+  g_print("Text: %s\n", text);
+  while (gtk_events_pending()) {
+    gtk_main_iteration_do(FALSE);
+  }
+}
 
 static void intruder_gui_on_reset(void) {
   user_packet = intruder_get_packet_data();
@@ -56,8 +61,7 @@ static void intruder_gui_on_copy_token(void) {
 }
 
 static void intruder_gui_on_send(void) {
-  const int index = gtk_combo_box_get_active(GTK_COMBO_BOX(combo_attack));
-  // app_state_transmit_packet();
+  intruder_send_attack(intruder_gui_get_attack());
 }
 
 static void intruder_payloads_paste_from_clipboard(GtkListStore *list_store) {
@@ -170,39 +174,31 @@ static void intruder_gui_on_payload_add(GtkWidget *button, gpointer user_data) {
   }
 }
 
-static GtkWidget *intruder_gui_number_rage_create(void) {
+static GtkWidget *intruder_gui_number_rage_create(int attack_index) {
   GtkWidget *num_grid = gtk_grid_new();
   gtk_grid_set_row_spacing(GTK_GRID(num_grid), 8);
   gtk_grid_set_column_spacing(GTK_GRID(num_grid), 15);
   gtk_container_set_border_width(GTK_CONTAINER(num_grid), 10);
 
-  const char *labels[] = {"From:", "To:", "Step:"};
-  int i = 0;
-  GtkWidget *label_from = gtk_label_new("From");
-  gtk_widget_set_halign(label_from, GTK_ALIGN_START);
   GtkAdjustment *adj_from = gtk_adjustment_new(0, 0, 1000000, 1, 10, 0);
-  widget_range_number_context.from = gtk_spin_button_new(adj_from, 1, 0);
-  gtk_widget_set_hexpand(widget_range_number_context.from, TRUE);
-  gtk_grid_attach(GTK_GRID(num_grid), label_from, 0, i, 1, 1);
-  gtk_grid_attach(GTK_GRID(num_grid), widget_range_number_context.from, 1, i, 1, 1);
-  i++;
-
-  GtkWidget *label_to = gtk_label_new("To");
-  gtk_widget_set_halign(label_to, GTK_ALIGN_START);
   GtkAdjustment *adj_to = gtk_adjustment_new(0, 0, 1000000, 1, 10, 0);
-  widget_range_number_context.to = gtk_spin_button_new(adj_to, 1, 0);
-  gtk_widget_set_hexpand(widget_range_number_context.to, TRUE);
-  gtk_grid_attach(GTK_GRID(num_grid), label_to, 0, i, 1, 1);
-  gtk_grid_attach(GTK_GRID(num_grid), widget_range_number_context.to, 1, i, 1, 1);
+  GtkAdjustment *adj_steps = gtk_adjustment_new(0, 1, 1000000, 1, 10, 0);
+
+  attack_widgets[attack_index].from = gtk_spin_button_new(adj_from, 1, 0);
+  attack_widgets[attack_index].to = gtk_spin_button_new(adj_to, 1, 0);
+  attack_widgets[attack_index].steps = gtk_spin_button_new(adj_steps, 1, 0);
+
+  int i = 0;
+  gtk_grid_attach(GTK_GRID(num_grid), gtk_label_new("From"), 0, i, 1, 1);
+  gtk_grid_attach(GTK_GRID(num_grid), attack_widgets[attack_index].from, 1, i, 1, 1);
   i++;
 
-  GtkWidget *label_steps = gtk_label_new("Steps");
-  gtk_widget_set_halign(label_steps, GTK_ALIGN_START);
-  GtkAdjustment *adj_steps = gtk_adjustment_new(0, 1, 1000000, 1, 10, 0);
-  widget_range_number_context.steps = gtk_spin_button_new(adj_steps, 1, 0);
-  gtk_widget_set_hexpand(widget_range_number_context.steps, TRUE);
-  gtk_grid_attach(GTK_GRID(num_grid), label_steps, 0, i, 1, 1);
-  gtk_grid_attach(GTK_GRID(num_grid), widget_range_number_context.steps, 1, i, 1, 1);
+  gtk_grid_attach(GTK_GRID(num_grid), gtk_label_new("To"), 0, i, 1, 1);
+  gtk_grid_attach(GTK_GRID(num_grid), attack_widgets[attack_index].to, 1, i, 1, 1);
+  i++;
+
+  gtk_grid_attach(GTK_GRID(num_grid), gtk_label_new("Steps"), 0, i, 1, 1);
+  gtk_grid_attach(GTK_GRID(num_grid), attack_widgets[attack_index].steps, 1, i, 1, 1);
 
   return num_grid;
 }
@@ -280,7 +276,7 @@ static GtkWidget *intruder_gui_attack_discovery_apid_create(void) {
   gtk_widget_set_halign(lbl_desc, GTK_ALIGN_START);
   gtk_box_pack_start(GTK_BOX(main_vbox), lbl_desc, FALSE, FALSE, 0);
 
-  gtk_box_pack_start(GTK_BOX(main_vbox), intruder_gui_number_rage_create(), FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(main_vbox), intruder_gui_number_rage_create(ATTACK_SERVICE_DISCOVERY), FALSE, FALSE, 0);
   return main_vbox;
 }
 
@@ -298,7 +294,7 @@ static GtkWidget *intruder_gui_attack_sequence_exhaustion_create(void) {
   gtk_widget_set_halign(lbl_desc, GTK_ALIGN_START);
   gtk_box_pack_start(GTK_BOX(main_vbox), lbl_desc, FALSE, FALSE, 0);
 
-  gtk_box_pack_start(GTK_BOX(main_vbox), intruder_gui_number_rage_create(), FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(main_vbox), intruder_gui_number_rage_create(ATTACK_SEQ_EXHAUSTION), FALSE, FALSE, 0);
   return main_vbox;
 }
 
@@ -321,6 +317,7 @@ static GtkWidget *intruder_gui_attack_mutation_create(void) {
 }
 
 static void on_attack_type_changed(GtkComboBox *combo, gpointer data) {
+  (void)data;
   const int index = gtk_combo_box_get_active(combo);
 
   switch (index) {
@@ -377,6 +374,10 @@ static void intruder_gui_layout_left_panel(GtkWidget *split_layout) {
   gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(hex_editor), GTK_WRAP_WORD);
   gtk_text_view_set_monospace(GTK_TEXT_VIEW(hex_editor), TRUE);
   gtk_container_add(GTK_CONTAINER(scroll_hex), hex_editor);
+  hex_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(hex_editor));
+
+  g_signal_connect(hex_buffer, "changed", G_CALLBACK(intruder_gui_on_payload_change), NULL);
+  intruder_gui_on_payload_change(hex_buffer, NULL);
 
   gtk_box_pack_start(GTK_BOX(left_vbox), scroll_hex, TRUE, TRUE, 0);
 
@@ -409,8 +410,11 @@ static void intruder_gui_layout_right_panel(GtkWidget *split_layout) {
   gtk_box_pack_start(GTK_BOX(right_vbox), attack_hbox, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(right_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 5);
 
-  gtk_box_pack_start(GTK_BOX(right_vbox), plugin_spp_crafter_create(), FALSE, FALSE, 0);
+  GtkWidget *plugin_box = plugin_spp_crafter_create();
+  gtk_box_pack_start(GTK_BOX(right_vbox), plugin_box, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(right_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 5);
+
+  g_signal_connect(plugin_box, "spp-data-changed", G_CALLBACK(on_plugin_state_modified), NULL);
 
   attack_stack = gtk_stack_new();
   gtk_stack_set_transition_type(GTK_STACK(attack_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
@@ -473,3 +477,8 @@ void intruder_gui_hexeditor_update(uint8_t *buffer, const int length) {
   const char *hex_string = uint8_buffer_to_hex_string(buffer, length);
   gtk_text_buffer_set_text(text_buffer, hex_string, -1);
 }
+
+gint intruder_gui_get_attack(void){ return gtk_combo_box_get_active(GTK_COMBO_BOX(combo_attack));}
+gint intruder_gui_get_range_from(const gint attack_index){ return gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(attack_widgets[attack_index].from));}
+gint intruder_gui_get_range_to(const gint attack_index){ return gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(attack_widgets[attack_index].to));}
+gint intruder_gui_get_range_steps(const gint attack_index){ return gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(attack_widgets[attack_index].steps));}

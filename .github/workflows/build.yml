@@ -5,15 +5,18 @@ on:
     branches: [ "main", "refactor" ]
     tags:
       - "v*.*.*"
-
 jobs:
   build:
     name: Build (${{ matrix.os }})
-    runs-on: ${{ matrix.os}}
+    runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
+
+    env:
+      BUILD_DIR: build
+      DIST_DIR: dist
 
     steps:
       - name: Checkout
@@ -38,25 +41,38 @@ jobs:
 
       - name: Configure
         run: |
-          cmake -B build -S . \
+          cmake -B $BUILD_DIR -S . \
             -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: |
-          cmake --build build -j$(nproc || sysctl -n hw.ncpu)
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            CORES=$(sysctl -n hw.ncpu)
+          else
+            CORES=$(nproc)
+          fi
 
-      - name: Strip binary (Linux)
+          cmake --build $BUILD_DIR -- -j$CORES
+
+      - name: Strip binary
         if: matrix.os == 'ubuntu-latest'
         run: |
-          strip build/ghostlayer || true
+          strip $BUILD_DIR/ghostlayer || true
 
       - name: Package
         run: |
-          mkdir dist
-          cp build/ghostlayer dist/ghostlayer
+          mkdir -p $DIST_DIR
+
+          VERSION=$(git describe --tags --always || echo "dev")
+
+          if [ "${{ matrix.os }}" = "macos-latest" ]; then
+            cp $BUILD_DIR/ghostlayer $DIST_DIR/ghostlayer-macos-$VERSION
+          else
+            cp $BUILD_DIR/ghostlayer $DIST_DIR/ghostlayer-linux-$VERSION
+          fi
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: ghostlayer-${{ matrix.os }}
-          path: dist/ghostlayer
+          path: dist/*
