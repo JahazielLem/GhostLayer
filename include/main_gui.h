@@ -41,8 +41,8 @@ void dissector_parser_register(void);
 void register_dissectors(void);
 
 /* GtkWidget */
-GtkWidget *statusbar_create(GtkWidget *widget, gpointer data);
-GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data);
+GtkWidget *statusbar_create(GtkWidget *widget);
+GtkWidget *toolbar_create(GtkWidget *widget);
 GtkWidget *packet_viewer_create(void);
 GtkWidget *packet_details_create(void);
 GtkWidget *packet_hexdump_create(void);

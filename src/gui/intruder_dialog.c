@@ -302,7 +302,7 @@ static GtkWidget *intruder_gui_attack_mutation_create(void) {
   GtkWidget *main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
   gtk_container_set_border_width(GTK_CONTAINER(main_vbox), 10);
 
-  GtkWidget *lbl_title = gtk_label_new("<b><span size='large'>Bit-Flip Mutation (Payload Fuzzer)</span></b>");
+  GtkWidget *lbl_title = gtk_label_new("<b><span size='large'>Boundary Condition (Payload Fuzzer)</span></b>");
   gtk_label_set_use_markup(GTK_LABEL(lbl_title), TRUE);
   gtk_widget_set_halign(lbl_title, GTK_ALIGN_START);
   gtk_box_pack_start(GTK_BOX(main_vbox), lbl_title, FALSE, FALSE, 0);

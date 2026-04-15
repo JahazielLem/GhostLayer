@@ -180,7 +180,7 @@ void packet_sender_dialog_create(GtkWidget *widget, gpointer data) {
   gtk_paned_pack1(GTK_PANED(split_layout_hex), payload_layout, TRUE, FALSE);
 
   GtkWidget *label_moded = gtk_label_new(NULL);
-  gtk_label_set_markup(GTK_LABEL(label_moded), "<b><span size='large'>Packet Base</span></b>");
+  gtk_label_set_markup(GTK_LABEL(label_moded), "<b><span size='large'>Payload</span></b>");
   gtk_widget_set_halign(label_moded, GTK_ALIGN_START);
   gtk_box_pack_start(GTK_BOX(payload_layout), label_moded, FALSE, FALSE, 0);
 

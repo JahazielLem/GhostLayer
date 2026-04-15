@@ -161,8 +161,8 @@ static gboolean fuzzer_gui_progress_worker(gpointer user_data) {
       if (intruder_fuzz_ctx.attack_type == ATTACK_SERVICE_DISCOVERY) {
         intruder_fuzz_ctx.spp_context.apid = (uint16_t)intruder_fuzz_ctx.current;
       } else {
-        intruder_fuzz_ctx.spp_context.tm = (uint16_t)intruder_fuzz_ctx.current;
-        intruder_fuzz_ctx.spp_context.tc = (uint16_t)intruder_fuzz_ctx.current;
+        intruder_fuzz_ctx.spp_context.tm = intruder_fuzz_ctx.attack_type == ATTACK_SEQ_EXHAUSTION ? (uint16_t)rand(): (uint16_t)intruder_fuzz_ctx.current;
+        intruder_fuzz_ctx.spp_context.tc = intruder_fuzz_ctx.attack_type == ATTACK_SEQ_EXHAUSTION ? (uint16_t)rand(): (uint16_t)intruder_fuzz_ctx.current;
       }
 
       fuzzer_gui_packet_viewer_add_numeric_payload((uint32_t)intruder_fuzz_ctx.current,

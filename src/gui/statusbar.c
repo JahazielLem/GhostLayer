@@ -32,9 +32,8 @@ void statusbar_update_label_packet_count(const uint16_t packet_count) {
   gtk_label_set_text(GTK_LABEL(statusbar_context.label_packets), buffer);
 }
 
-GtkWidget *statusbar_create(GtkWidget *widget, gpointer data) {
-  (void)widget;
-  GtkWidget *window = (GtkWidget *) data;
+GtkWidget *statusbar_create(GtkWidget *widget) {
+  GtkWidget *window = (GtkWidget *) widget;
 
   GtkWidget *statusbar = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
   gtk_widget_set_margin_top(statusbar, 4);

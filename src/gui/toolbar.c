@@ -61,10 +61,8 @@ static void toolbar_on_save_pcap(GtkWidget *widget, gpointer user_data) {
   pcap_reader_save_dialog(widget, user_data);
 }
 
-GtkWidget *toolbar_create(GtkWidget *widget, gpointer user_data) {
-  (void)widget;
-
-  GtkWidget *window = (GtkWidget *) user_data;
+GtkWidget *toolbar_create(GtkWidget *widget) {
+  GtkWidget *window = (GtkWidget *) widget;
   GtkWidget *toolbar = gtk_toolbar_new();
 
   toolbar_context.iface = gtk_tool_button_new(NULL, "iFace");

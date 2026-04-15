@@ -1,361 +1,251 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-# Author: Kevin Leon
-# Date: 2026
+#
+# SPDX-License-Identifier: GPL-3.0
+#
+# GNU Radio Python Flow Graph
+# Title: Deamon Bridge
+# GNU Radio version: 3.10.12.0
 
-import argparse
-import select
-import signal
-import socket
-import string
-import struct
+from gnuradio import blocks
+from gnuradio import filter
+from gnuradio.filter import firdes
+from gnuradio import gr
+from gnuradio.fft import window
 import sys
-import time
-
-import zmq
-from pluto_lora_rx import pluto_lora_rx
-
-DEFAULT_PORT = 5009
-DEFAULT_PLUTO_SOURCE = "ip:pluto.local"
-DEFAULT_DOWNLINK_ADDRESS = "tcp://127.0.0.1:5009"
-DEFAULT_FILE_OUTPUT = "output.bin"
-
-DEFAULT_BRIDGE_HOST = "127.0.0.1"
-DEFAULT_BRIDGE_PORT = 5008
-
-DOWNLINK_FREQ = 916000000
-DOWNLINK_BW = 250000
-DOWNLINK_SF = 7
-
-# PCAP Constants
-PCAP_GLOBAL_HEADER_FORMAT = "<LHHIILL"
-PCAP_PACKET_HEADER_FORMAT = "<llll"
-PCAP_MAGIC_NUMBER = 0xA1B2C3D4
-PCAP_VERSION_MAJOR = 2
-PCAP_VERSION_MINOR = 4
-PCAP_MAX_PACKET_SIZE = 0x0000FFFF
+import signal
+from argparse import ArgumentParser
+from gnuradio.eng_arg import eng_float, intx
+from gnuradio import eng_notation
+from gnuradio import iio
+from gnuradio import zeromq
+import gnuradio.lora_sdr as lora_sdr
+import threading
 
 
-def is_hex_encoded(data: bytes) -> bool:
-    if len(data) % 2 != 0:
-        return False
-
-    hex_chars = set(string.hexdigits.encode("ascii"))
-    return all(byte in hex_chars for byte in data)
 
 
-def pcap_header(interface=148):
-    return struct.pack(
-        PCAP_GLOBAL_HEADER_FORMAT,
-        PCAP_MAGIC_NUMBER,
-        PCAP_VERSION_MAJOR,
-        PCAP_VERSION_MINOR,
-        0,
-        0,
-        PCAP_MAX_PACKET_SIZE,
-        interface,
-    )
+class bridge(gr.top_block):
+
+    def __init__(self):
+        gr.top_block.__init__(self, "Deamon Bridge", catch_exceptions=True)
+        self.flowgraph_started = threading.Event()
+
+        ##################################################
+        # Variables
+        ##################################################
+        self.samp_mult = samp_mult = 2
+        self.bandwidth = bandwidth = 250000
+        self.tx_bandwidth = tx_bandwidth = 250000
+        self.samp_rate = samp_rate = bandwidth*samp_mult
+        self.zmq_address = zmq_address = "tcp://0.0.0.0:5009"
+        self.tx_zmq_address = tx_zmq_address = "tcp://0.0.0.0:5007"
+        self.tx_spread_factor = tx_spread_factor = 7
+        self.tx_samp_rate = tx_samp_rate = int(tx_bandwidth)
+        self.tx_gain = tx_gain = 0
+        self.tx_frequency = tx_frequency = 918000000
+        self.spread_factor = spread_factor = 7
+        self.pluto_source = pluto_source = "ip:pluto.local"
+        self.impl_header = impl_header = False
+        self.has_crc = has_crc = True
+        self.frequency = frequency = 916000000
+        self.coding_rate = coding_rate = 1
+        self.bandpass = bandpass = firdes.complex_band_pass(1.0, samp_rate, -bandwidth/2, bandwidth/2, bandwidth/50, window.WIN_HAMMING, 6.76)
+
+        ##################################################
+        # Blocks
+        ##################################################
+
+        self.zeromq_pull_msg_source_0 = zeromq.pull_msg_source(tx_zmq_address, 100, True)
+        self.zeromq_pub_sink_0 = zeromq.pub_sink(gr.sizeof_char, 1, zmq_address, 100, False, 1000, '', True, True)
+        self.low_pass_filter_0 = filter.fir_filter_ccf(
+            1,
+            firdes.low_pass(
+                1,
+                tx_samp_rate,
+                100000,
+                5000,
+                window.WIN_HAMMING,
+                6.76))
+        self.lora_tx_0 = lora_sdr.lora_sdr_lora_tx(
+            bw=tx_bandwidth,
+            cr=1,
+            has_crc=True,
+            impl_head=False,
+            samp_rate=tx_samp_rate,
+            sf=tx_spread_factor,
+         ldro_mode=2,frame_zero_padd=10000,sync_word=[0x12] )
+        self.lora_rx_0 = lora_sdr.lora_sdr_lora_rx( bw=bandwidth, cr=1, has_crc=True, impl_head=False, pay_len=255, samp_rate=samp_rate, sf=spread_factor, sync_word=[0x12], soft_decoding=True, ldro_mode=2, print_rx=[False,False])
+        self.iio_pluto_source_0 = iio.fmcomms2_source_fc32(pluto_source if pluto_source else iio.get_pluto_uri(), [True, True], 22768)
+        self.iio_pluto_source_0.set_len_tag_key('packet_len')
+        self.iio_pluto_source_0.set_frequency(frequency)
+        self.iio_pluto_source_0.set_samplerate(samp_rate)
+        self.iio_pluto_source_0.set_gain_mode(0, 'slow_attack')
+        self.iio_pluto_source_0.set_gain(0, 64)
+        self.iio_pluto_source_0.set_quadrature(True)
+        self.iio_pluto_source_0.set_rfdc(True)
+        self.iio_pluto_source_0.set_bbdc(True)
+        self.iio_pluto_source_0.set_filter_params('Auto', '', 0, 0)
+        self.iio_pluto_sink_0 = iio.fmcomms2_sink_fc32(pluto_source if pluto_source else iio.get_pluto_uri(), [True, True], 22768, False)
+        self.iio_pluto_sink_0.set_len_tag_key('')
+        self.iio_pluto_sink_0.set_bandwidth(tx_bandwidth)
+        self.iio_pluto_sink_0.set_frequency(tx_frequency)
+        self.iio_pluto_sink_0.set_samplerate(tx_samp_rate)
+        self.iio_pluto_sink_0.set_attenuation(0, tx_gain)
+        self.iio_pluto_sink_0.set_filter_params('Auto', '', 0, 0)
+        self.freq_xlating_fir_filter_xxx_0 = filter.freq_xlating_fir_filter_ccc(1, bandpass, 0, samp_rate)
+        self.blocks_multiply_const_vxx_0 = blocks.multiply_const_cc(1)
 
 
-class Pcap:
-    def __init__(self, packet: bytes, timestamp_seconds: float):
-        self.packet = packet
-        self.timestamp_seconds = timestamp_seconds
-        self.pcap_packet = self.pack()
-
-    def pack(self):
-        int_timestamp = int(self.timestamp_seconds)
-        timestamp_offset = int((self.timestamp_seconds - int_timestamp) * 1_000_000)
-        return (
-            struct.pack(
-                PCAP_PACKET_HEADER_FORMAT,
-                int_timestamp,
-                timestamp_offset,
-                len(self.packet),
-                len(self.packet),
-            )
-            + self.packet
-        )
-
-    def get(self):
-        return self.pcap_packet
+        ##################################################
+        # Connections
+        ##################################################
+        self.msg_connect((self.zeromq_pull_msg_source_0, 'out'), (self.lora_tx_0, 'in'))
+        self.connect((self.blocks_multiply_const_vxx_0, 0), (self.low_pass_filter_0, 0))
+        self.connect((self.freq_xlating_fir_filter_xxx_0, 0), (self.lora_rx_0, 0))
+        self.connect((self.iio_pluto_source_0, 0), (self.freq_xlating_fir_filter_xxx_0, 0))
+        self.connect((self.lora_rx_0, 0), (self.zeromq_pub_sink_0, 0))
+        self.connect((self.lora_tx_0, 0), (self.blocks_multiply_const_vxx_0, 0))
+        self.connect((self.low_pass_filter_0, 0), (self.iio_pluto_sink_0, 0))
 
 
-def hexdump(data: bytes, width: int = 16) -> str:
-    lines = []
-    for offset in range(0, len(data), width):
-        chunk = data[offset : offset + width]
-        hex_bytes = " ".join(f"{b:02X}" for b in chunk)
-        hex_bytes = hex_bytes.ljust(width * 3)
-        ascii_bytes = "".join(
-            chr(b) if chr(b) in string.printable and b >= 0x20 else "." for b in chunk
-        )
-        lines.append(f"{offset:08X}  {hex_bytes}  {ascii_bytes}")
-    return "\n".join(lines)
+    def get_samp_mult(self):
+        return self.samp_mult
+
+    def set_samp_mult(self, samp_mult):
+        self.samp_mult = samp_mult
+        self.set_samp_rate(self.bandwidth*self.samp_mult)
+
+    def get_bandwidth(self):
+        return self.bandwidth
+
+    def set_bandwidth(self, bandwidth):
+        self.bandwidth = bandwidth
+        self.set_bandpass(firdes.complex_band_pass(1.0, self.samp_rate, -self.bandwidth/2, self.bandwidth/2, self.bandwidth/50, window.WIN_HAMMING, 6.76))
+        self.set_samp_rate(self.bandwidth*self.samp_mult)
+
+    def get_tx_bandwidth(self):
+        return self.tx_bandwidth
+
+    def set_tx_bandwidth(self, tx_bandwidth):
+        self.tx_bandwidth = tx_bandwidth
+        self.set_tx_samp_rate(int(self.tx_bandwidth))
+        self.iio_pluto_sink_0.set_bandwidth(self.tx_bandwidth)
+
+    def get_samp_rate(self):
+        return self.samp_rate
+
+    def set_samp_rate(self, samp_rate):
+        self.samp_rate = samp_rate
+        self.set_bandpass(firdes.complex_band_pass(1.0, self.samp_rate, -self.bandwidth/2, self.bandwidth/2, self.bandwidth/50, window.WIN_HAMMING, 6.76))
+        self.iio_pluto_source_0.set_samplerate(self.samp_rate)
+
+    def get_zmq_address(self):
+        return self.zmq_address
+
+    def set_zmq_address(self, zmq_address):
+        self.zmq_address = zmq_address
+
+    def get_tx_zmq_address(self):
+        return self.tx_zmq_address
+
+    def set_tx_zmq_address(self, tx_zmq_address):
+        self.tx_zmq_address = tx_zmq_address
+
+    def get_tx_spread_factor(self):
+        return self.tx_spread_factor
+
+    def set_tx_spread_factor(self, tx_spread_factor):
+        self.tx_spread_factor = tx_spread_factor
+        self.lora_tx_0.set_sf(self.tx_spread_factor)
+
+    def get_tx_samp_rate(self):
+        return self.tx_samp_rate
+
+    def set_tx_samp_rate(self, tx_samp_rate):
+        self.tx_samp_rate = tx_samp_rate
+        self.iio_pluto_sink_0.set_samplerate(self.tx_samp_rate)
+        self.low_pass_filter_0.set_taps(firdes.low_pass(1, self.tx_samp_rate, 100000, 5000, window.WIN_HAMMING, 6.76))
+
+    def get_tx_gain(self):
+        return self.tx_gain
+
+    def set_tx_gain(self, tx_gain):
+        self.tx_gain = tx_gain
+        self.iio_pluto_sink_0.set_attenuation(0,self.tx_gain)
+
+    def get_tx_frequency(self):
+        return self.tx_frequency
+
+    def set_tx_frequency(self, tx_frequency):
+        self.tx_frequency = tx_frequency
+        self.iio_pluto_sink_0.set_frequency(self.tx_frequency)
+
+    def get_spread_factor(self):
+        return self.spread_factor
+
+    def set_spread_factor(self, spread_factor):
+        self.spread_factor = spread_factor
+
+    def get_pluto_source(self):
+        return self.pluto_source
+
+    def set_pluto_source(self, pluto_source):
+        self.pluto_source = pluto_source
+
+    def get_impl_header(self):
+        return self.impl_header
+
+    def set_impl_header(self, impl_header):
+        self.impl_header = impl_header
+
+    def get_has_crc(self):
+        return self.has_crc
+
+    def set_has_crc(self, has_crc):
+        self.has_crc = has_crc
+
+    def get_frequency(self):
+        return self.frequency
+
+    def set_frequency(self, frequency):
+        self.frequency = frequency
+        self.iio_pluto_source_0.set_frequency(self.frequency)
+
+    def get_coding_rate(self):
+        return self.coding_rate
+
+    def set_coding_rate(self, coding_rate):
+        self.coding_rate = coding_rate
+
+    def get_bandpass(self):
+        return self.bandpass
+
+    def set_bandpass(self, bandpass):
+        self.bandpass = bandpass
+        self.freq_xlating_fir_filter_xxx_0.set_taps(self.bandpass)
 
 
-def hex_string_to_bytes(data_bytes: bytes) -> bytes:
-    try:
-        clean_str = data_bytes.decode("ascii", errors="ignore").replace(" ", "").strip()
-        if len(clean_str) % 2 != 0:
-            clean_str = clean_str[:-1]
-        return bytes.fromhex(clean_str)
-    except Exception as e:
-        print(f"[!] Error converting hex string: {e}")
-        return b""
 
 
-def show_args_config(args):
-    print("========== Configuration ==========")
-    for k, v in vars(args).items():
-        print(f"{k:25}: {v}")
-    print("----------------------------------\n")
+def main(top_block_cls=bridge, options=None):
+    tb = top_block_cls()
+
+    def sig_handler(sig=None, frame=None):
+        tb.stop()
+        tb.wait()
+
+        sys.exit(0)
+
+    signal.signal(signal.SIGINT, sig_handler)
+    signal.signal(signal.SIGTERM, sig_handler)
+
+    tb.start()
+    tb.flowgraph_started.set()
+
+    tb.wait()
 
 
-class Controller:
-    def __init__(self, args):
-        self.args = args
-        self.ctx = None
-        self.sock = None
-        self.tb = None
-        self.running = False
-        self.f_output = None
-        self.f_pcap_output = None
-        self.bridge_sock = None
-        self.last_reconnect_time = 0
-
-    def file_write_frame(self, data: bytes):
-        if self.f_output is not None:
-            ts = time.time_ns()
-            length = len(data)
-            header = struct.pack("<QH", ts, length)
-            self.f_output.write(header)
-            self.f_output.write(data)
-            self.f_output.flush()
-
-    def file_open(self):
-        self.f_output = open(self.args.output_file, "wb")
-
-    def file_close(self):
-        if self.f_output:
-            self.f_output.close()
-
-    def pcap_write_frame(self, data: bytes):
-        if self.f_pcap_output is not None:
-            pcap_packet = Pcap(data, time.time()).get()
-            self.f_pcap_output.write(pcap_packet)
-            self.f_pcap_output.flush()
-
-    def pcap_open(self):
-        self.f_pcap_output = open(self.args.pcap_output_file, "wb")
-        self.f_pcap_output.write(pcap_header())
-        self.f_pcap_output.flush()
-
-    def pcap_close(self):
-        if self.f_pcap_output:
-            self.f_pcap_output.close()
-
-    def setup(self):
-        if pluto_lora_rx is not None:
-            self.tb = pluto_lora_rx()
-            self.tb.set_frequency(float(self.args.frequency))
-            self.tb.set_bandwidth(int(self.args.bandwidth))
-            self.tb.set_zmq_address(self.args.address)
-            self.tb.set_pluto_source(str(self.args.pluto_address))
-        else:
-            print(
-                "[!] Warning: pluto_lora_rx module not found. Running in ZMQ-only mode."
-            )
-
-        if self.args.output_file:
-            self.file_open()
-
-        if self.args.pcap_output_file:
-            self.pcap_open()
-
-    def connect_to_bridge(self):
-        now = time.time()
-        if self.bridge_sock is None and (now - self.last_reconnect_time) > 2:
-            self.last_reconnect_time = now
-            try:
-                self.bridge_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                self.bridge_sock.settimeout(1.0)
-                self.bridge_sock.connect((self.args.bridge_host, self.args.bridge_port))
-                self.bridge_sock.setblocking(False)
-                print(
-                    f"[*] Connected to bridge at {self.args.bridge_host}:{self.args.bridge_port}"
-                )
-            except (ConnectionRefusedError, socket.error):
-                self.bridge_sock = None
-
-    def send_to_bridge(self, data: bytes):
-        if self.bridge_sock:
-            payload = (
-                bytes([0x64, 0x83])
-                + struct.pack(">B", len(data))
-                + data
-                + bytes([0x64, 0x69])
-            )
-            print(payload)
-            try:
-                self.bridge_sock.sendall(payload)
-            except socket.error:
-                print("[!] Bridge connection lost")
-                self.bridge_sock.close()
-                self.bridge_sock = None
-
-    def parse_bridge_data(self, data: bytes):
-        if len(data) < 12:
-            return
-        try:
-            (header, frequency, bandwidth, spreadfactor, tail) = struct.unpack_from(
-                ">HIHHH", data
-            )
-
-            if header == 0x6483 and tail == 0x6469:
-                print(
-                    f"Header: {header} Freq: {frequency / 100} Bw: {bandwidth / 100} {spreadfactor}"
-                )
-            else:
-                print(f"[!] Invalid Packet Magic: {header:04X} {tail:04X}")
-        except struct.error as e:
-            print(f"[!] Parsing error: {e}")
-
-    def start(self):
-        self.running = True
-        if self.tb:
-            self.tb.start()
-            print("[+] GNU Radio script started")
-
-        self.ctx = zmq.Context()
-        self.sock = self.ctx.socket(zmq.SUB)
-        self.sock.connect(self.args.address)
-        self.sock.setsockopt(zmq.SUBSCRIBE, b"")
-        print(f"[*] Subscribed to {self.args.address} (Mode: {self.args.mode.upper()})")
-
-        self.connect_to_bridge()
-
-    def stop(self):
-        if not self.running:
-            return
-
-        print("\n[!] Stopping...")
-        if self.tb:
-            self.tb.stop()
-            self.tb.wait()
-
-        if self.sock:
-            self.sock.close(0)
-
-        if self.ctx:
-            self.ctx.term()
-
-        if self.bridge_sock:
-            self.bridge_sock.close()
-
-        self.file_close()
-        self.pcap_close()
-        print("[*] Clean exit")
-
-    def run(self):
-        def handler(sig, frame):
-            self.stop()
-            sys.exit(0)
-
-        signal.signal(signal.SIGINT, handler)
-        signal.signal(signal.SIGTERM, handler)
-
-        self.setup()
-        self.start()
-
-        poller = zmq.Poller()
-        poller.register(self.sock, zmq.POLLIN)
-
-        try:
-            while self.running:
-                self.connect_to_bridge()
-
-                socks = dict(poller.poll(10))
-                if self.sock in socks and socks[self.sock] == zmq.POLLIN:
-                    raw_zmq = self.sock.recv()
-                    processed = (
-                        hex_string_to_bytes(raw_zmq)
-                        if self.args.mode == "tc"
-                        else raw_zmq
-                    )
-
-                    if processed:
-                        print(
-                            f"\n=========== {self.args.mode.upper()} PACKET ==========="
-                        )
-                        print(f"Original Length: {len(raw_zmq)}")
-                        print(f"Processed Length: {len(processed)}")
-                        print(hexdump(processed))
-                        self.send_to_bridge(processed)
-                        self.file_write_frame(processed)
-                        self.pcap_write_frame(processed)
-                if self.bridge_sock:
-                    try:
-                        readable, _, _ = select.select([self.bridge_sock], [], [], 0.01)
-                        if readable:
-                            bridge_data = self.bridge_sock.recv(1024)
-                            if not bridge_data:
-                                print("[!] Bridge disconnected")
-                                self.bridge_sock.close()
-                                self.bridge_sock = None
-                            else:
-                                self.parse_bridge_data(bridge_data)
-                                if self.tb:
-                                    pass
-                    except socket.error:
-                        self.bridge_sock = None
-        except KeyboardInterrupt:
-            self.stop()
-
-
-def main():
-    parser = argparse.ArgumentParser(
-        prog="pylora_rx",
-        description="GNU Radio LoRa Receiver",
-        epilog="Kevin Leon - 2026",
-    )
-    parser.add_argument(
-        "-f", "--frequency", help="Frequency for Downlink (Hz)", default=DOWNLINK_FREQ
-    )
-    parser.add_argument(
-        "-bw", "--bandwidth", help="Bandwidth for Downlink (Hz)", default=DOWNLINK_BW
-    )
-    parser.add_argument(
-        "-sf",
-        "--spread_factor",
-        help="SpreadFactor for Downlink (Hz)",
-        default=DOWNLINK_SF,
-    )
-    parser.add_argument(
-        "-a", "--address", help="ZMQ Address for RX", default=DEFAULT_DOWNLINK_ADDRESS
-    )
-    parser.add_argument("-o", "--output-file", help="File output")
-    parser.add_argument("-pcap", "--pcap-output-file", help="File output")
-    parser.add_argument(
-        "-p", "--pluto-address", help="Pluto Source", default=DEFAULT_PLUTO_SOURCE
-    )
-
-    parser.add_argument(
-        "-m",
-        "--mode",
-        choices=["tm", "tc"],
-        default="tm",
-        help="Operation mode: tm (Binary) or tc (Hex String to Binary). Default: tm",
-    )
-    parser.add_argument("--bridge-host", default=DEFAULT_BRIDGE_HOST)
-    parser.add_argument("--bridge-port", type=int, default=DEFAULT_BRIDGE_PORT)
-
-    args = parser.parse_args()
-    show_args_config(args)
-
-    ctrl = Controller(args)
-    ctrl.run()
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

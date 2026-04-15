@@ -37,7 +37,7 @@ CMAKE_BUILD_TYPE:STRING=
 CMAKE_COLOR_MAKEFILE:BOOL=ON
 
 //C compiler
-CMAKE_C_COMPILER:FILEPATH=/usr/bin/cc
+CMAKE_C_COMPILER:STRING=/usr/bin/cc
 
 //Flags used by the C compiler during all build types.
 CMAKE_C_FLAGS:STRING=
@@ -189,6 +189,9 @@ CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
 CMAKE_PROJECT_NAME:STATIC=ghostlayer
+
+//Value Computed by CMake
+CMAKE_PROJECT_SPDX_LICENSE:STATIC=
 
 //Value Computed by CMake
 CMAKE_PROJECT_VERSION:STATIC=0.0.1
@@ -356,6 +359,9 @@ pkgcfg_lib_GTK_pango-1.0:FILEPATH=/opt/homebrew/Cellar/pango/1.57.1/lib/libpango
 //Path to a library.
 pkgcfg_lib_GTK_pangocairo-1.0:FILEPATH=/opt/homebrew/Cellar/pango/1.57.1/lib/libpangocairo-1.0.dylib
 
+//Path to a library.
+pkgcfg_lib_PCAP_pcap:FILEPATH=/opt/homebrew/Cellar/libpcap/1.10.6/lib/libpcap.dylib
+
 
 ########################
 # INTERNAL cache entries
@@ -370,9 +376,9 @@ CMAKE_CACHEFILE_DIR:INTERNAL=/Users/astrobyte/Repos/GhostLayer/build
 //Major version of cmake used to create the current loaded cache
 CMAKE_CACHE_MAJOR_VERSION:INTERNAL=4
 //Minor version of cmake used to create the current loaded cache
-CMAKE_CACHE_MINOR_VERSION:INTERNAL=1
+CMAKE_CACHE_MINOR_VERSION:INTERNAL=3
 //Patch version of cmake used to create the current loaded cache
-CMAKE_CACHE_PATCH_VERSION:INTERNAL=2
+CMAKE_CACHE_PATCH_VERSION:INTERNAL=1
 //ADVANCED property for variable: CMAKE_COLOR_MAKEFILE
 CMAKE_COLOR_MAKEFILE-ADVANCED:INTERNAL=1
 //Path to CMake executable.
@@ -561,6 +567,41 @@ GTK_gtk+-3.0_INCLUDEDIR:INTERNAL=
 GTK_gtk+-3.0_LIBDIR:INTERNAL=
 GTK_gtk+-3.0_PREFIX:INTERNAL=
 GTK_gtk+-3.0_VERSION:INTERNAL=
+PCAP_CFLAGS:INTERNAL=-I/opt/homebrew/Cellar/libpcap/1.10.6/include
+PCAP_CFLAGS_I:INTERNAL=
+PCAP_CFLAGS_OTHER:INTERNAL=
+PCAP_FOUND:INTERNAL=1
+PCAP_INCLUDEDIR:INTERNAL=/opt/homebrew/Cellar/libpcap/1.10.6/include
+PCAP_INCLUDE_DIRS:INTERNAL=/opt/homebrew/Cellar/libpcap/1.10.6/include
+PCAP_LDFLAGS:INTERNAL=-L/opt/homebrew/Cellar/libpcap/1.10.6/lib;-lpcap
+PCAP_LDFLAGS_OTHER:INTERNAL=
+PCAP_LIBDIR:INTERNAL=/opt/homebrew/Cellar/libpcap/1.10.6/lib
+PCAP_LIBRARIES:INTERNAL=pcap
+PCAP_LIBRARY_DIRS:INTERNAL=/opt/homebrew/Cellar/libpcap/1.10.6/lib
+PCAP_LIBS:INTERNAL=
+PCAP_LIBS_L:INTERNAL=
+PCAP_LIBS_OTHER:INTERNAL=
+PCAP_LIBS_PATHS:INTERNAL=
+PCAP_MODULE_NAME:INTERNAL=libpcap
+PCAP_PREFIX:INTERNAL=/opt/homebrew/Cellar/libpcap/1.10.6
+PCAP_STATIC_CFLAGS:INTERNAL=-I/opt/homebrew/Cellar/libpcap/1.10.6/include
+PCAP_STATIC_CFLAGS_I:INTERNAL=
+PCAP_STATIC_CFLAGS_OTHER:INTERNAL=
+PCAP_STATIC_INCLUDE_DIRS:INTERNAL=/opt/homebrew/Cellar/libpcap/1.10.6/include
+PCAP_STATIC_LDFLAGS:INTERNAL=-L/opt/homebrew/Cellar/libpcap/1.10.6/lib;-lpcap
+PCAP_STATIC_LDFLAGS_OTHER:INTERNAL=
+PCAP_STATIC_LIBDIR:INTERNAL=
+PCAP_STATIC_LIBRARIES:INTERNAL=pcap
+PCAP_STATIC_LIBRARY_DIRS:INTERNAL=/opt/homebrew/Cellar/libpcap/1.10.6/lib
+PCAP_STATIC_LIBS:INTERNAL=
+PCAP_STATIC_LIBS_L:INTERNAL=
+PCAP_STATIC_LIBS_OTHER:INTERNAL=
+PCAP_STATIC_LIBS_PATHS:INTERNAL=
+PCAP_VERSION:INTERNAL=1.10.6
+PCAP_libpcap_INCLUDEDIR:INTERNAL=
+PCAP_libpcap_LIBDIR:INTERNAL=
+PCAP_libpcap_PREFIX:INTERNAL=
+PCAP_libpcap_VERSION:INTERNAL=
 //ADVANCED property for variable: PKG_CONFIG_ARGN
 PKG_CONFIG_ARGN-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: PKG_CONFIG_EXECUTABLE
@@ -568,7 +609,9 @@ PKG_CONFIG_EXECUTABLE-ADVANCED:INTERNAL=1
 //CMAKE_INSTALL_PREFIX during last run
 _GNUInstallDirs_LAST_CMAKE_INSTALL_PREFIX:INTERNAL=/usr/local
 __pkg_config_arguments_GTK:INTERNAL=REQUIRED;gtk+-3.0
+__pkg_config_arguments_PCAP:INTERNAL=REQUIRED;libpcap
 __pkg_config_checked_GTK:INTERNAL=1
+__pkg_config_checked_PCAP:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_GTK_atk-1.0
 pkgcfg_lib_GTK_atk-1.0-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_GTK_cairo
@@ -595,5 +638,7 @@ pkgcfg_lib_GTK_intl-ADVANCED:INTERNAL=1
 pkgcfg_lib_GTK_pango-1.0-ADVANCED:INTERNAL=1
 //ADVANCED property for variable: pkgcfg_lib_GTK_pangocairo-1.0
 pkgcfg_lib_GTK_pangocairo-1.0-ADVANCED:INTERNAL=1
-prefix_result:INTERNAL=/opt/homebrew/Cellar/gtk+3/3.24.51/lib
+//ADVANCED property for variable: pkgcfg_lib_PCAP_pcap
+pkgcfg_lib_PCAP_pcap-ADVANCED:INTERNAL=1
+prefix_result:INTERNAL=/opt/homebrew/Cellar/libpcap/1.10.6/lib
 
