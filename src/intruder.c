@@ -15,7 +15,6 @@
 #include "plugins.h"
 #include "bridge.h"
 #include "app_state.h"
-
 typedef struct {
   gint attack_type;
   gint from;
@@ -29,7 +28,7 @@ typedef struct {
   uint8_t *base_payload;
   int base_payload_len;
   spp_apid_context_t spp_context;
-
+  
   // Specific context for Payload List attack
   GList *payload_list;
   GList *current_node;
@@ -61,19 +60,14 @@ static int intruder_build_packet_to_send(uint8_t *buffer, uint16_t buffer_length
   space_packet_t new_spp;
   int ret = SPP_ERROR_NONE;
 
-  uint8_t dummy_payload[1] = {0x00};
+  const uint8_t dummy_payload[1] = {0x00};
   const uint8_t *ptr = (buffer != NULL && buffer_length > 0) ? buffer : dummy_payload;
   const uint16_t len = (buffer != NULL && buffer_length > 0) ? buffer_length : 1;
 
   if (plugin_spp_get_type() == SPP_PTYPE_TM) {
-    ret = spp_tm_build_packet(&new_spp, plugin_spp_get_seq_flag(),
-      plugin_spp_get_sechdr(), 0,
-      ptr, len, context);
+    ret = spp_tm_build_packet(&new_spp, plugin_spp_get_seq_flag(), ptr, len, context);
   }else {
-    ret = spp_tc_build_packet(&new_spp, plugin_spp_get_seq_flag(),
-    plugin_spp_get_sechdr(), 0,
-    ptr, len, context);
-
+    ret = spp_tc_build_packet(&new_spp, plugin_spp_get_seq_flag(), ptr, len, context);
   }
   if (ret != SPP_ERROR_NONE) {
     g_print("SPP error: %d\n", ret);

@@ -100,6 +100,10 @@ static void main_gui_create_main_window(GtkApplication *app, gpointer user_data)
 
   main_gui_menu_create(app, window);
   main_gui_layout_create(app, window);
+
+  GtkSettings *settings = gtk_settings_get_default();
+  g_object_set(settings, "gtk-application-prefer-dark-theme", TRUE, NULL);
+
   gtk_widget_show_all(window);
 }
 

@@ -7840,6 +7840,7 @@ CMakeFiles/ghostlayer.dir/src/gui/intruder_dialog.c.o: /Users/astrobyte/Repos/Gh
   _deps/ccsds-src/include/common.h \
   _deps/ccsds-src/include/spp/spp.h \
   _deps/ccsds-src/include/spp_config.h \
+  /Users/astrobyte/Repos/GhostLayer/include/alerts.h \
   /Users/astrobyte/Repos/GhostLayer/include/app_state.h \
   /Users/astrobyte/Repos/GhostLayer/include/bridge.h \
   /Users/astrobyte/Repos/GhostLayer/include/dissectors.h \

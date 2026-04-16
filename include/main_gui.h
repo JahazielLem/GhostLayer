@@ -18,6 +18,7 @@
 #include "dissectors.h"
 #include "intruder.h"
 #include "plugins.h"
+#include "builder.h"
 
 #define APPLICATION_MAIN_NAME "GhostLayer - IoT Packet Analyzer"
 #define APPLICATION_WEBSITE   "https://github.com/JahazielLem/GhostLayer"

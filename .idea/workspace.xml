@@ -5,6 +5,7 @@
   </component>
   <component name="BackendCodeEditorMiscSettings">
     <option name="/Default/Housekeeping/FeatureSuggestion/FeatureSuggestionManager/DisabledSuggesters/=SwitchToGoToActionSuggester/@EntryIndexedValue" value="true" type="bool" />
+    <option name="/Default/Housekeeping/OptionsDialog/SelectedPageId/@EntryValue" value="CppFormatterOtherPage" type="string" />
   </component>
   <component name="CMakePresetLoader">{
   &quot;useNewFormat&quot;: true
@@ -32,10 +33,22 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="5693bf0c-cb6a-4a4e-9cc8-dab1cfb6672e" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/include/builder.h" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/builder/bgenerators.c" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/builder/btemplates.c" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/builder/builder.c" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/gui/widget_payload_list.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/vcs.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/ghostlayer.dir/compiler_depend.internal" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/ghostlayer.dir/compiler_depend.internal" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/CMakeFiles/ghostlayer.dir/compiler_depend.make" beforeDir="false" afterPath="$PROJECT_DIR$/build/CMakeFiles/ghostlayer.dir/compiler_depend.make" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/build/ghostlayer" beforeDir="false" afterPath="$PROJECT_DIR$/build/ghostlayer" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/include/main_gui.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/main_gui.h" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/gui/intruder_dialog.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/intruder_dialog.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/gui/main_gui.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/main_gui.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/gui/toolbar.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/gui/toolbar.c" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/intruder.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/intruder.c" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/plugins/plugin_spp_crafter.c" beforeDir="false" afterPath="$PROJECT_DIR$/src/plugins/plugin_spp_crafter.c" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -106,7 +119,17 @@
     &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
 }</component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/src/builder" />
+    </key>
+  </component>
   <component name="RunManager" selected="CMake Application.ghostlayer">
+    <configuration default="true" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true">
+      <method v="2">
+        <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
+      </method>
+    </configuration>
     <configuration name="ccsds" type="CMakeRunConfiguration" factoryName="Application" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" EMULATE_TERMINAL="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="ghostlayer" TARGET_NAME="ccsds" CONFIG_NAME="Debug">
       <method v="2">
         <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
@@ -161,6 +184,8 @@
       <workItem from="1776005095609" duration="600000" />
       <workItem from="1776026442012" duration="3611000" />
       <workItem from="1776122146961" duration="1530000" />
+      <workItem from="1776322880444" duration="5949000" />
+      <workItem from="1776366654116" duration="7121000" />
     </task>
     <servers />
   </component>

@@ -13,6 +13,7 @@
 
 #include "main_gui.h"
 #include "app_state.h"
+#include "alerts.h"
 
 typedef struct {
   GtkWidget *from;
@@ -43,14 +44,20 @@ static void intruder_gui_on_payload_change(GtkTextBuffer *buffer, gpointer user_
   GtkTextIter start, end;
   gtk_text_buffer_get_bounds(buffer, &start, &end);
   const char *text = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
-  g_print("Text: %s\n", text);
-  while (gtk_events_pending()) {
-    gtk_main_iteration_do(FALSE);
+  if (text == NULL || strlen(text) == 0){
+    g_print("Update with TC packet\n");
+    space_packet_t *space_packet = plugin_spp_build_packet(NULL, 0);
+    if (space_packet == NULL) { return; }
+    intruder_gui_hexeditor_update((uint8_t*)space_packet, space_packet->header.length + SPP_PRIMARY_HEADER_LEN);
+    return;
   }
+  g_print("Text: %s\n", text);
 }
 
 static void intruder_gui_on_reset(void) {
   user_packet = intruder_get_packet_data();
+
+  if (user_packet == NULL){ return; }
 
   intruder_gui_hexeditor_update(user_packet->buffer, user_packet->length);
   plugin_spp_parse_packet(user_packet->buffer, user_packet->length);
@@ -61,7 +68,11 @@ static void intruder_gui_on_copy_token(void) {
 }
 
 static void intruder_gui_on_send(void) {
-  intruder_send_attack(intruder_gui_get_attack());
+  if (!app_state_server_get_state()) {
+    alert_show_dialog(GTK_WINDOW(intruder_window), ALERT_ERROR, "Connection Error", "Python bridge is offline.");
+  }else {
+    intruder_send_attack(intruder_gui_get_attack());
+  }
 }
 
 static void intruder_payloads_paste_from_clipboard(GtkListStore *list_store) {
@@ -213,11 +224,11 @@ static GtkWidget *intruder_gui_payload_create(void) {
 
   GtkWidget *payload_main_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
 
-  GtkWidget *payload_btn_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-  GtkWidget *btn_payload_paste = gtk_button_new_with_label("Paste");
-  GtkWidget *btn_payload_load = gtk_button_new_with_label("Load...");
+  GtkWidget *payload_btn_vbox   = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+  GtkWidget *btn_payload_paste  = gtk_button_new_with_label("Paste");
+  GtkWidget *btn_payload_load   = gtk_button_new_with_label("Load...");
   GtkWidget *btn_payload_remove = gtk_button_new_with_label("Remove");
-  GtkWidget *btn_payload_clear = gtk_button_new_with_label("Clear");
+  GtkWidget *btn_payload_clear  = gtk_button_new_with_label("Clear");
   gtk_box_pack_start(GTK_BOX(payload_btn_vbox), btn_payload_paste, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(payload_btn_vbox), btn_payload_load, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(payload_btn_vbox), btn_payload_remove, FALSE, FALSE, 0);
@@ -377,7 +388,6 @@ static void intruder_gui_layout_left_panel(GtkWidget *split_layout) {
   hex_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(hex_editor));
 
   g_signal_connect(hex_buffer, "changed", G_CALLBACK(intruder_gui_on_payload_change), NULL);
-  intruder_gui_on_payload_change(hex_buffer, NULL);
 
   gtk_box_pack_start(GTK_BOX(left_vbox), scroll_hex, TRUE, TRUE, 0);
 
@@ -402,6 +412,7 @@ static void intruder_gui_layout_right_panel(GtkWidget *split_layout) {
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Discovery Attack    (APID Sweep)");
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Sequence Exhaustion (Counter Fuzzing)");
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Bit-Flip Mutation   (Payload Fuzzer)");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Pitchfork   (Payload Fuzzer)");
   gtk_combo_box_set_active(GTK_COMBO_BOX(combo_attack), 0);
 
   gtk_box_pack_start(GTK_BOX(attack_hbox), lbl_attack, FALSE, FALSE, 0);
@@ -467,6 +478,8 @@ void intruder_gui_create(void) {
   gtk_widget_show_all(intruder_window);
 
   gtk_paned_set_position(GTK_PANED(main_layout), (gint)(APPLICATION_MIN_WIDTH * 0.7) / 2);
+
+  intruder_gui_on_payload_change(hex_buffer, NULL);
 
   while (gtk_events_pending()) {
     gtk_main_iteration();
