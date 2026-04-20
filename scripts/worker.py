@@ -15,7 +15,7 @@ import socket
 import select
 import threading
 
-from scripts.worker import bridge
+from bridge import bridge
 
 DEFAULT_PLUTO_SOURCE = "ip:pluto.local"
 DEFAULT_DOWNLINK_ADDRESS = "tcp://127.0.0.1:5009"
