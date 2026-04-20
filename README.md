@@ -8,4 +8,22 @@ A GTK based application for IoT communications.
 # Installation
 
 **Requierements**:
-- GTK 4
+- GTK 3
+
+
+```shell
+
+sudo apt update
+sudo apt install libpcap
+sudo apt-get install libpcap-dev
+
+
+git clone https://github.com/tapparelj/gr-lora_sdr.git
+cd gr-lora_sdr
+mkdir build
+cd build
+cmake ..
+make
+sudo make install
+sudo ldconfig
+```

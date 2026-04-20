@@ -70,7 +70,7 @@ def hexdump(data: bytes, width: int = 16) -> str:
 
 def hex_string_to_bytes(data_bytes: bytes) -> bytes:
   try:
-    clean_str = data_bytes.decode('ascii', errors='ignore').replace(" ", "").strip()
+    clean_str = data_bytes.decode('latin-1', errors='ignore').replace(" ", "").strip()
     if len(clean_str) % 2 != 0:
       clean_str = clean_str[:-1]
     return bytes.fromhex(clean_str)
@@ -222,8 +222,6 @@ class Controller:
     self.txsock.connect(self.args.uplink_address)
     self.txsock.setsockopt(zmq.LINGER, 0)
 
-    # === LA CORRECCIÓN CLAVE PARA EL CRASH ===
-    # Aumentamos el HWM (High Water Mark) a 20 para que pueda absorber tu ráfaga de 6
     self.txsock.setsockopt(zmq.RCVHWM, 20)
     self.txsock.setsockopt(zmq.SNDHWM, 20)
 
@@ -245,11 +243,9 @@ class Controller:
     self.pcap_close()
     print("[*] Clean exit")
 
-  # --- HILO 1: Solo escucha radio (SDR -> Python -> C GUI) ---
   def thread_radio_rx(self):
     while self.running:
       try:
-        # Al estar en su propio hilo, podemos usar recv() bloqueante con timeout
         if self.rxsock.poll(1000, zmq.POLLIN):
           raw_zmq = self.rxsock.recv()
           processed = hex_string_to_bytes(raw_zmq) if self.args.mode == "tc" else raw_zmq
@@ -262,9 +258,8 @@ class Controller:
             self.file_write_frame(processed)
             self.pcap_write_frame(processed)
       except zmq.ZMQError:
-        pass # Salida limpia al detener
+        pass
 
-  # --- HILO 2: Solo escucha comandos de C (C GUI -> Python -> SDR) ---
   def thread_bridge_rx(self):
     while self.running:
       self.connect_to_bridge()
@@ -282,7 +277,7 @@ class Controller:
         except (socket.error, select.error):
           self.bridge_sock = None
       else:
-        time.sleep(1) # Si no hay bridge, pausa para no saturar CPU
+        time.sleep(1)
 
   def run(self):
     def handler(sig, frame):
@@ -295,7 +290,6 @@ class Controller:
     self.setup()
     self.start()
 
-    # Iniciar los hilos independientes
     t_rx = threading.Thread(target=self.thread_radio_rx, daemon=True)
     t_bridge = threading.Thread(target=self.thread_bridge_rx, daemon=True)
 
@@ -303,7 +297,6 @@ class Controller:
     t_bridge.start()
 
     try:
-      # El hilo principal solo se queda vivo esperando Ctrl+C
       while self.running:
         time.sleep(0.5)
     except KeyboardInterrupt:
