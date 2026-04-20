@@ -45,13 +45,11 @@ static void intruder_gui_on_payload_change(GtkTextBuffer *buffer, gpointer user_
   gtk_text_buffer_get_bounds(buffer, &start, &end);
   const char *text = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
   if (text == NULL || strlen(text) == 0){
-    g_print("Update with TC packet\n");
     space_packet_t *space_packet = plugin_spp_build_packet(NULL, 0);
     if (space_packet == NULL) { return; }
     intruder_gui_hexeditor_update((uint8_t*)space_packet, space_packet->header.length + SPP_PRIMARY_HEADER_LEN);
     return;
   }
-  g_print("Text: %s\n", text);
 }
 
 static void intruder_gui_on_reset(void) {
@@ -412,7 +410,6 @@ static void intruder_gui_layout_right_panel(GtkWidget *split_layout) {
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Discovery Attack    (APID Sweep)");
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Sequence Exhaustion (Counter Fuzzing)");
   gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Bit-Flip Mutation   (Payload Fuzzer)");
-  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo_attack), "Pitchfork   (Payload Fuzzer)");
   gtk_combo_box_set_active(GTK_COMBO_BOX(combo_attack), 0);
 
   gtk_box_pack_start(GTK_BOX(attack_hbox), lbl_attack, FALSE, FALSE, 0);

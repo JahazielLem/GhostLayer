@@ -23,12 +23,17 @@ typedef struct {
   GtkWidget *btn_launch;
   GtkWidget *combo_tokens;
   GtkWidget *attack_stack;
-
+  GtkWidget *packet_viewer_window;
   // General widgets
   // Numeric
   GtkWidget *numeric_from;
   GtkWidget *numeric_to;
   GtkWidget *numeric_step;
+  // Simple List
+  GtkWidget *tree_view;
+  GtkWidget *entry_add;
+  GtkListStore *list_store;
+  GList *payload_list;
 } advanced_gui_ctx_t;
 
 typedef struct {
@@ -52,6 +57,14 @@ typedef struct {
   token_data_t data;
 } advanced_marked_ctx_t;
 
+typedef struct {
+  int num_tokens;
+  int *current_indices;
+  int *max_items;
+  gint timeout;
+  gboolean running;
+} campaign_t;
+
 static const char *marker_colors[] = {
   "#ff5555", "#50fa7b", "#f1fa8c", "#bd93f9", "#ff79c6", "#8be9fd", "#ffb86c", "#6272a4"
 };
@@ -59,22 +72,325 @@ static const char *marker_colors[] = {
 
 static advanced_gui_ctx_t gui_ctx;
 static GList *marked_list = NULL;
+static campaign_t campaign;
 static GtkWidget *combo_gen;
 
 static void on_combo_attack_change(GtkComboBox *combo, gpointer data);
 static void on_token_selection_changed(GtkComboBox *combo, gpointer data);
 
-// Cambia la firma de la función. El 'widget' es el SpinButton que se modificó.
+static void init_cluster_bomb(void) {
+  campaign.num_tokens = g_list_length(marked_list);
+
+  if (campaign.num_tokens == 0) return;
+
+  campaign.current_indices = g_new0(int, campaign.num_tokens);
+  campaign.max_items = g_new0(int, campaign.num_tokens);
+
+  int i = 0;
+  for (GList *l = marked_list; l != NULL; l = l->next) {
+    const advanced_marked_ctx_t *token = (advanced_marked_ctx_t *)l->data;
+
+    if (token->attack_type == 0) {
+      const double diff = token->data.numeric_to - token->data.numeric_from;
+      if (token->data.numeric_step > 0 && diff >= 0) {
+        campaign.max_items[i] = (int)(diff / token->data.numeric_step) + 1;
+      } else {
+        campaign.max_items[i] = 1;
+      }
+    } else if (token->attack_type == 1) {
+      campaign.max_items[i] = (int)g_list_length(token->data.payload_list);
+      if (campaign.max_items[i] == 0) campaign.max_items[i] = 1;
+    } else {
+      campaign.max_items[i] = 1;
+    }
+    i++;
+  }
+}
+
+static gboolean advance_odometer(void) {
+  for (int i = campaign.num_tokens - 1; i >= 0; i--) {
+    campaign.current_indices[i]++;
+    if (campaign.current_indices[i] < campaign.max_items[i]) {
+      return TRUE;
+    }
+    campaign.current_indices[i] = 0;
+  }
+  return FALSE;
+}
+
+static gboolean fuzzer_gui_progress_worker(gpointer user_data) {
+  GtkWidget *window = (GtkWidget*)user_data;
+
+  if (!campaign.running) return FALSE;
+
+  g_print("--- Sending Combination ---\n");
+  int i = 0;
+  for (GList *l = marked_list; l != NULL; l = l->next) {
+    advanced_marked_ctx_t *token = (advanced_marked_ctx_t *)l->data;
+    int current_idx = campaign.current_indices[i];
+
+    if (token->attack_type == 0) {
+      double actual_val = token->data.numeric_from + (current_idx * token->data.numeric_step);
+      g_print("Token %d (Numeric): %0.2f\n", token->id, actual_val);
+
+      // TODO: Replace '§' markers in your hex buffer with this actual_val
+
+    } else if (token->attack_type == 1) {
+      if (token->data.payload_list != NULL) {
+        gchar *payload_str = (gchar *)g_list_nth_data(token->data.payload_list, current_idx);
+        g_print("Token %d (List): %s\n", token->id, payload_str);
+
+        // TODO: Replace '§' markers in your hex buffer with this payload_str
+      }
+    }
+    i++;
+  }
+
+  // --- 2. Transmit Packet ---
+  // app_state_transmit_packet_with_config(...);
+
+  // --- 3. Advance to Next Combination ---
+  gboolean attack_finished = !advance_odometer();
+
+  // --- 4. UI Updates ---
+  // Note: For a true progress bar in Cluster Bomb, you need to calculate the total Cartesian product.
+  // We'll skip exact percentage calculation here for brevity and just show activity.
+  gtk_progress_bar_pulse(GTK_PROGRESS_BAR(gui_ctx.progress_bar));
+
+  if (attack_finished) {
+    campaign.running = FALSE;
+    g_free(campaign.current_indices);
+    g_free(campaign.max_items);
+
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(gui_ctx.progress_bar), 1.0);
+    gtk_progress_bar_set_text(GTK_PROGRESS_BAR(gui_ctx.progress_bar), "100% - Complete");
+    alert_show_dialog(GTK_WINDOW(window), ALERT_SUCCESS, "Fuzzer", "Cluster Bomb Complete!");
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+static void intruder_gui_loading_dialog_destroy(GtkWidget *widget) {
+  if (campaign.running) {
+    campaign.running = FALSE;
+  }
+  gtk_widget_destroy(widget);
+  gui_ctx.packet_viewer_window = NULL;
+}
+
+static void intruder_gui_loading_dialog(void) {
+  gui_ctx.packet_viewer_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
+  gtk_window_set_title(GTK_WINDOW(gui_ctx.packet_viewer_window),
+    g_strdup_printf("Intruder - Fuzzer Attack"));
+  gtk_window_set_default_size(GTK_WINDOW(gui_ctx.packet_viewer_window), (int)(APPLICATION_MIN_WIDTH * 0.8), (int)(APPLICATION_MIN_HEIGHT * 0.8));
+  gtk_window_set_position(GTK_WINDOW(gui_ctx.packet_viewer_window), GTK_WIN_POS_CENTER);
+
+  GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 10);
+  gtk_container_add(GTK_CONTAINER(gui_ctx.packet_viewer_window), vbox);
+
+  GtkWidget *packet_viewer = fuzzer_gui_packet_viewer();
+  gui_ctx.progress_bar = gtk_progress_bar_new();
+  gtk_progress_bar_set_show_text(GTK_PROGRESS_BAR(gui_ctx.progress_bar), TRUE);
+  gtk_box_pack_start(GTK_BOX(vbox), gui_ctx.progress_bar, FALSE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(vbox), packet_viewer, TRUE, TRUE, 0);
+
+  g_signal_connect(gui_ctx.packet_viewer_window, "destroy", G_CALLBACK(intruder_gui_loading_dialog_destroy), NULL);
+
+  g_timeout_add((campaign.timeout * 1000), fuzzer_gui_progress_worker, gui_ctx.packet_viewer_window);
+
+  gtk_widget_show_all(gui_ctx.packet_viewer_window);
+}
+
+static void on_start_attack(void) {
+  if (g_list_length(marked_list) == 0) {
+    g_print("Error: No markers defined.\n");
+    return;
+  }
+
+  const gint strategy = gtk_combo_box_get_active(GTK_COMBO_BOX(gui_ctx.combo_strategy));
+
+  if (strategy == 1) {
+    init_cluster_bomb();
+  } else {
+    // Sniper
+  }
+
+  campaign.running = TRUE;
+  campaign.timeout = plugin_radio_get_delay();
+
+  intruder_gui_loading_dialog();
+}
+
+static void on_update_payload_list_view(advanced_marked_ctx_t *token) {
+  gtk_list_store_clear(gui_ctx.list_store);
+
+  for (GList *l = token->data.payload_list; l != NULL; l = l->next) {
+    gchar *payload_text = (gchar *)l->data;
+    GtkTreeIter iter;
+    gtk_list_store_append(gui_ctx.list_store, &iter);
+    gtk_list_store_set(gui_ctx.list_store, &iter, 0, payload_text, -1);
+  }
+}
+
+static void intruder_payloads_paste_from_clipboard(GtkListStore *list_store) {
+  GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+  gchar *payload_list = gtk_clipboard_wait_for_text(clipboard);
+
+  if (payload_list == NULL) {
+    g_print("Empty or it's not a text");
+    return;
+  }
+
+  const gint token_index = gtk_combo_box_get_active(GTK_COMBO_BOX(gui_ctx.combo_tokens));
+  if (token_index < 0) return;
+  advanced_marked_ctx_t *token = (advanced_marked_ctx_t *)g_list_nth_data(marked_list, token_index);
+  if (!token) return;
+
+  gchar **lines = g_strsplit_set(payload_list, "\r\n", -1);
+  for (int i = 0; lines[i] != NULL; i++) {
+    gchar *line = g_strstrip(lines[i]);
+
+    if (strlen(line) == 0){ continue;}
+
+    GtkTreeIter iter;
+    gtk_list_store_append(list_store, &iter);
+    gtk_list_store_set(list_store, &iter, 0, line, -1);
+    gchar *pt_stripped = g_strdup(line);
+    token->data.payload_list = g_list_append(token->data.payload_list, pt_stripped);
+  }
+
+  g_strfreev(lines);
+  g_free(payload_list);
+}
+
+static void intruder_gui_on_payload_paste(GtkButton *button, gpointer user_data) {
+  (void)button;
+  GtkListStore *store = GTK_LIST_STORE(user_data);
+  intruder_payloads_paste_from_clipboard(store);
+}
+
+static void intruder_gui_on_payload_remove(GtkButton *button, gpointer user_data) {
+  (void)button;
+  GtkListStore *store = GTK_LIST_STORE(user_data);
+  GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(gui_ctx.tree_view));
+  GtkTreeIter iter;
+  GtkTreeModel *model;
+
+  const gint token_index = gtk_combo_box_get_active(GTK_COMBO_BOX(gui_ctx.combo_tokens));
+  if (token_index < 0) return;
+  advanced_marked_ctx_t *token = (advanced_marked_ctx_t *)g_list_nth_data(marked_list, token_index);
+  if (!token) return;
+
+  if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
+    gchar *selected_text = NULL;
+    gtk_tree_model_get(model, &iter, 0, &selected_text, -1);
+
+    if (selected_text) {
+      GList *target_node = g_list_find_custom(token->data.payload_list, selected_text, (GCompareFunc)g_strcmp0);
+      if (target_node) {
+        g_free(target_node->data);
+        token->data.payload_list = g_list_delete_link(token->data.payload_list, target_node); // Remove the node
+      }
+      g_free(selected_text);
+
+      gtk_list_store_remove(store, &iter);
+    }
+  }
+}
+
+static void intruder_gui_on_payload_load_from_file(GtkButton *button, gpointer user_data) {
+  (void)button;
+  GtkListStore *store = GTK_LIST_STORE(user_data);
+  GtkWidget *dialog = gtk_file_chooser_dialog_new("Open Payload File",
+    GTK_WINDOW(gui_ctx.window),
+    GTK_FILE_CHOOSER_ACTION_OPEN,
+    "_Cancel", GTK_RESPONSE_CANCEL,
+    "_Open", GTK_RESPONSE_ACCEPT,
+    NULL);
+  gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER);
+
+  const gint token_index = gtk_combo_box_get_active(GTK_COMBO_BOX(gui_ctx.combo_tokens));
+  if (token_index < 0) return;
+  advanced_marked_ctx_t *token = (advanced_marked_ctx_t *)g_list_nth_data(marked_list, token_index);
+  if (!token) return;
+
+  if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
+    char *filename = gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
+    GIOChannel *channel = g_io_channel_new_file(filename, "r", NULL);
+
+    if (channel) {
+      gchar *line = NULL;
+      GError *error = NULL;
+      while (g_io_channel_read_line(channel, &line, NULL, NULL, &error) == G_IO_STATUS_NORMAL) {
+        const gchar *stripped = g_strstrip(line);
+        if (strlen(stripped) > 0) {
+          GtkTreeIter iter;
+          gtk_list_store_append(store, &iter);
+          gtk_list_store_set(store, &iter, 0, stripped, -1);
+          gchar *pt_stripped = g_strdup(stripped);
+          token->data.payload_list = g_list_append(token->data.payload_list, pt_stripped);
+        }
+        g_free(line);
+      }
+      if (error) g_error_free(error);
+      g_io_channel_unref(channel);
+    }
+    g_free(filename);
+  }
+  gtk_widget_destroy(dialog);
+}
+
+static void intruder_gui_on_payload_clear(GtkWidget *button, gpointer user_data) {
+  (void)button;
+  GtkListStore *store = GTK_LIST_STORE(user_data);
+
+  GtkWidget *dialog = gtk_dialog_new_with_buttons("Are you sure?",
+    GTK_WINDOW(gui_ctx.window),
+    GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
+    "_Cancel", GTK_RESPONSE_REJECT,
+    "Accept", GTK_RESPONSE_ACCEPT,
+    NULL);
+
+  gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(gui_ctx.window));
+  gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ON_PARENT);
+
+  if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
+    gtk_list_store_clear(store);
+    g_list_free_full(gui_ctx.payload_list, g_free);
+    gui_ctx.payload_list = NULL;
+  }
+  gtk_widget_destroy(dialog);
+}
+
+static void intruder_gui_on_payload_add(GtkWidget *button, gpointer user_data) {
+  (void)button;
+  GtkListStore *store = GTK_LIST_STORE(user_data);
+
+  const gint token_index = gtk_combo_box_get_active(GTK_COMBO_BOX(gui_ctx.combo_tokens));
+  if (token_index < 0) return;
+  advanced_marked_ctx_t *token = (advanced_marked_ctx_t *)g_list_nth_data(marked_list, token_index);
+  if (!token) return;
+  const gchar *payload = gtk_entry_get_text(GTK_ENTRY(gui_ctx.entry_add));
+  if (payload && strlen(payload) > 0) {
+    GtkTreeIter iter;
+    gtk_list_store_append(store, &iter);
+    gtk_list_store_set(store, &iter, 0, payload, -1);
+    gtk_entry_set_text(GTK_ENTRY(gui_ctx.entry_add), "");
+
+    gchar *pt_stripped = g_strdup(payload);
+    token->data.payload_list = g_list_append(token->data.payload_list, pt_stripped);
+  }
+}
+
 static void on_numeric_change(GtkWidget *widget, gpointer data) {
   (void)widget;
   (void)data;
 
   const gint token_index = gtk_combo_box_get_active(GTK_COMBO_BOX(gui_ctx.combo_tokens));
-
   if (token_index < 0) {return;}
 
   advanced_marked_ctx_t *token = (advanced_marked_ctx_t *)g_list_nth_data(marked_list, token_index);
-
   if (!token) {return;}
 
   token->data.numeric_from = gtk_spin_button_get_value(GTK_SPIN_BUTTON(gui_ctx.numeric_from));
@@ -83,12 +399,20 @@ static void on_numeric_change(GtkWidget *widget, gpointer data) {
 }
 
 static void on_update_numeric_values(advanced_marked_ctx_t *token) {
+  g_signal_handlers_block_by_func(gui_ctx.numeric_from, (gpointer)on_numeric_change, NULL);
+  g_signal_handlers_block_by_func(gui_ctx.numeric_to, (gpointer)on_numeric_change, NULL);
+  g_signal_handlers_block_by_func(gui_ctx.numeric_step, (gpointer)on_numeric_change, NULL);
+
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(gui_ctx.numeric_from), token->data.numeric_from);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(gui_ctx.numeric_to), token->data.numeric_to);
   gtk_spin_button_set_value(GTK_SPIN_BUTTON(gui_ctx.numeric_step), token->data.numeric_step);
+
+  g_signal_handlers_unblock_by_func(gui_ctx.numeric_from, (gpointer)on_numeric_change, NULL);
+  g_signal_handlers_unblock_by_func(gui_ctx.numeric_to, (gpointer)on_numeric_change, NULL);
+  g_signal_handlers_unblock_by_func(gui_ctx.numeric_step, (gpointer)on_numeric_change, NULL);
 }
 
-static GtkWidget *intruder_gui_number_rage_create(void) {
+static GtkWidget *intruder_gui_number_range_create(void) {
   GtkWidget *num_grid = gtk_grid_new();
   gtk_grid_set_row_spacing(GTK_GRID(num_grid), 8);
   gtk_grid_set_column_spacing(GTK_GRID(num_grid), 15);
@@ -121,6 +445,64 @@ static GtkWidget *intruder_gui_number_rage_create(void) {
   return num_grid;
 }
 
+static GtkWidget *intruder_gui_simple_list_create(void) {
+  GtkWidget *main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+  GtkWidget *lbl_payloads = gtk_label_new("<b><span size='medium'>Payload Configuration</span></b>");
+  gtk_label_set_use_markup(GTK_LABEL(lbl_payloads), TRUE);
+  gtk_widget_set_halign(lbl_payloads, GTK_ALIGN_START);
+  gtk_box_pack_start(GTK_BOX(main_vbox), lbl_payloads, FALSE, FALSE, 0);
+
+  GtkWidget *payload_main_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 10);
+
+  GtkWidget *payload_btn_vbox   = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
+  GtkWidget *btn_payload_paste  = gtk_button_new_with_label("Paste");
+  GtkWidget *btn_payload_load   = gtk_button_new_with_label("Load...");
+  GtkWidget *btn_payload_remove = gtk_button_new_with_label("Remove");
+  GtkWidget *btn_payload_clear  = gtk_button_new_with_label("Clear");
+  gtk_box_pack_start(GTK_BOX(payload_btn_vbox), btn_payload_paste, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(payload_btn_vbox), btn_payload_load, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(payload_btn_vbox), btn_payload_remove, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(payload_btn_vbox), btn_payload_clear, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(payload_main_hbox), payload_btn_vbox, FALSE, FALSE, 0);
+
+  GtkWidget *scroll_list = gtk_scrolled_window_new(NULL, NULL);
+  gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll_list), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC);
+  gtk_widget_set_hexpand(scroll_list, TRUE);
+  gtk_widget_set_size_request(scroll_list, -1, 150);
+
+  gui_ctx.list_store = gtk_list_store_new(1, G_TYPE_STRING);
+  gui_ctx.tree_view = gtk_tree_view_new_with_model(GTK_TREE_MODEL(gui_ctx.list_store));
+  gtk_tree_view_set_grid_lines(GTK_TREE_VIEW(gui_ctx.tree_view), GTK_TREE_VIEW_GRID_LINES_HORIZONTAL);
+  g_object_unref(gui_ctx.list_store);
+
+  GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
+  GtkTreeViewColumn *column = gtk_tree_view_column_new_with_attributes("Payload Item", renderer, "text", 0, NULL);
+  gtk_tree_view_append_column(GTK_TREE_VIEW(gui_ctx.tree_view), column);
+  gtk_tree_view_set_headers_visible(GTK_TREE_VIEW(gui_ctx.tree_view), FALSE);
+
+  gtk_container_add(GTK_CONTAINER(scroll_list), gui_ctx.tree_view);
+  gtk_box_pack_start(GTK_BOX(payload_main_hbox), scroll_list, TRUE, TRUE, 0);
+
+  gtk_box_pack_start(GTK_BOX(main_vbox), payload_main_hbox, TRUE, TRUE, 0);
+
+  GtkWidget *add_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5);
+  gui_ctx.entry_add = gtk_entry_new();
+  gtk_widget_set_hexpand(gui_ctx.entry_add, TRUE);
+  GtkWidget *btn_add = gtk_button_new_with_label("Add");
+
+  gtk_box_pack_start(GTK_BOX(add_hbox), gui_ctx.entry_add, TRUE, TRUE, 0);
+  gtk_box_pack_start(GTK_BOX(add_hbox), btn_add, FALSE, FALSE, 0);
+
+  gtk_box_pack_start(GTK_BOX(main_vbox), add_hbox, FALSE, FALSE, 0);
+
+  g_signal_connect(btn_payload_paste, "clicked", G_CALLBACK(intruder_gui_on_payload_paste), gui_ctx.list_store);
+  g_signal_connect(btn_payload_load, "clicked", G_CALLBACK(intruder_gui_on_payload_load_from_file), gui_ctx.list_store);
+  g_signal_connect(btn_payload_remove, "clicked", G_CALLBACK(intruder_gui_on_payload_remove), gui_ctx.list_store);
+  g_signal_connect(btn_payload_clear, "clicked", G_CALLBACK(intruder_gui_on_payload_clear), gui_ctx.list_store);
+  g_signal_connect(btn_add, "clicked", G_CALLBACK(intruder_gui_on_payload_add), gui_ctx.list_store);
+  return main_vbox;
+}
+
 static void sync_token_widgets(advanced_marked_ctx_t *token) {
   if (!token) return;
 
@@ -130,6 +512,7 @@ static void sync_token_widgets(advanced_marked_ctx_t *token) {
   gtk_stack_set_visible_child_name(GTK_STACK(gui_ctx.attack_stack), page_name[token->attack_type]);
 
   on_update_numeric_values(token);
+  on_update_payload_list_view(token);
 }
 
 static void on_token_selection_changed(GtkComboBox *combo, gpointer data) {
@@ -271,7 +654,7 @@ static GtkWidget *create_template_layout_left(void) {
   gtk_box_pack_start(GTK_BOX(top_hbox), gui_ctx.combo_strategy, TRUE, FALSE, 0);
 
   GtkWidget *btn_start_attack = gtk_button_new_with_label("Start Attack");
-  g_signal_connect(btn_start_attack, "clicked", G_CALLBACK(on_add_marker_clicked), NULL);
+  g_signal_connect(btn_start_attack, "clicked", G_CALLBACK(on_start_attack), NULL);
   gtk_box_pack_start(GTK_BOX(top_hbox), btn_start_attack, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(left_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 5);
 
@@ -335,11 +718,14 @@ static GtkWidget *create_template_layout_right(void) {
   gui_ctx.attack_stack = gtk_stack_new();
   gtk_stack_set_transition_type(GTK_STACK(gui_ctx.attack_stack), GTK_STACK_TRANSITION_TYPE_CROSSFADE);
 
-  gtk_stack_add_named(GTK_STACK(gui_ctx.attack_stack), intruder_gui_number_rage_create(), "numeric_page");
-  gtk_stack_add_named(GTK_STACK(gui_ctx.attack_stack), gtk_label_new("List Editor..."), "list_page");
-  gtk_stack_add_named(GTK_STACK(gui_ctx.attack_stack), gtk_label_new("BoF Config..."), "blocks_page");
+  gtk_stack_add_named(GTK_STACK(gui_ctx.attack_stack), intruder_gui_number_range_create(), "numeric_page");
+  gtk_stack_add_named(GTK_STACK(gui_ctx.attack_stack), intruder_gui_simple_list_create(), "list_page");
+  gtk_stack_add_named(GTK_STACK(gui_ctx.attack_stack), gtk_label_new("I'm still working on it :P"), "blocks_page");
 
   gtk_box_pack_start(GTK_BOX(right_vbox), gui_ctx.attack_stack, TRUE, TRUE, 0);
+
+  gtk_box_pack_start(GTK_BOX(right_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 5);
+  plugin_radio_create(right_vbox);
 
   g_signal_connect(gui_ctx.combo_tokens, "changed", G_CALLBACK(on_token_selection_changed), NULL);
   g_signal_connect(combo_gen, "changed", G_CALLBACK(on_combo_attack_change), NULL);
@@ -379,11 +765,7 @@ void generator_gui_create(GtkWindow *parent) {
   GtkWidget *main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
   gtk_container_add(GTK_CONTAINER(gui_ctx.window), main_vbox);
 
-  GtkWidget *split_layout = create_template_page();
-
-  gtk_box_pack_start(GTK_BOX(main_vbox), split_layout, TRUE, TRUE, 0);
-  gtk_box_pack_start(GTK_BOX(main_vbox), gtk_separator_new(GTK_ORIENTATION_HORIZONTAL), FALSE, FALSE, 0);
-  gtk_box_pack_start(GTK_BOX(main_vbox), create_status_area(), FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(main_vbox), create_template_page(), TRUE, TRUE, 0);
 
   gtk_widget_show_all(gui_ctx.window);
   while (gtk_events_pending()) {
