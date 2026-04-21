@@ -1,0 +1,1 @@
+/usr/bin/cc  -arch arm64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names -L/opt/homebrew/lib CMakeFiles/example_spp.dir/example_spp.c.o -o example_spp  ../libccsds.a

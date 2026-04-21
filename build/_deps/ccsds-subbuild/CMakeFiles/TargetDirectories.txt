@@ -1,0 +1,3 @@
+/Users/astrobyte/Repos/GhostLayer/build/_deps/ccsds-subbuild/CMakeFiles/ccsds-populate.dir
+/Users/astrobyte/Repos/GhostLayer/build/_deps/ccsds-subbuild/CMakeFiles/edit_cache.dir
+/Users/astrobyte/Repos/GhostLayer/build/_deps/ccsds-subbuild/CMakeFiles/rebuild_cache.dir

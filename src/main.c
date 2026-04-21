@@ -1,17 +1,19 @@
-/* src - main.c
+/**
+ * @file src/main.c
+ * @brief PROJECT
  *
- * GhostLayer - By astrobyte 25/02/26.
+ * DESCRIPTION
  *
- * SPDX-License-Identifier: GPL-2.0-or-later
- *
+ * @author astrobyte
+ * @date 2026-04-09
+ * @license GNU General Public License
+ * @copyright Copyright (c) 2026 kevin Leon
+ * @contact kevinleon.morales@gmail.com
  */
+#include "main_gui.h"
 
-#include "ui/ui-manager.h"
-#include "core/core.h"
-#include "dissectors/dissector.h"
-
-int main(const int argc, char *argv[]){
-  gl_dissector_init_core();
-  core_init();
-  return ui_manager_init(argc, argv);
+int main(int argc, char *argv[]) {
+  register_dissectors();
+  dissector_parser_register();
+  return gui_main(argc, argv);
 }

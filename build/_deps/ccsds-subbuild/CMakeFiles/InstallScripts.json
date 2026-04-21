@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/Users/astrobyte/Repos/GhostLayer/build/_deps/ccsds-subbuild/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
