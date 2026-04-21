@@ -1,2 +1,0 @@
-/usr/bin/ar qc libccsds.a CMakeFiles/ccsds.dir/src/spp/spp.c.o
-/usr/bin/ranlib libccsds.a
