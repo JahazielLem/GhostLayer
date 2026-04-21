@@ -68,12 +68,43 @@ def hexdump(data: bytes, width: int = 16) -> str:
     lines.append(f"{offset:08X}  {hex_bytes}  {ascii_bytes}")
   return "\n".join(lines)
 
+def hex_char_to_nibble(c: int) -> int:
+  if ord('0') <= c <= ord('9'):
+    return c - ord('0')
+  if ord('A') <= c <= ord('F'):
+    return c - ord('A') + 10
+  if ord('a') <= c <= ord('f'):
+    return c - ord('a') + 10
+  return -1
+
+
+def hex_string_to_bytes(input_bytes: bytes) -> bytes:
+  output = bytearray()
+  i = 0
+  length = len(input_bytes)
+
+  while i < length:
+    if input_bytes[i] == ord(' '):
+      i += 1
+      continue
+
+    if i + 1 >= length:
+      break
+
+    high = hex_char_to_nibble(input_bytes[i])
+    low = hex_char_to_nibble(input_bytes[i + 1])
+
+    if high < 0 or low < 0:
+      break
+
+    output.append((high << 4) | low)
+    i += 2
+
+  return bytes(output)
+
 def hex_string_to_bytes(data_bytes: bytes) -> bytes:
   try:
-    clean_str = data_bytes.decode('latin-1', errors='ignore').replace(" ", "").strip()
-    if len(clean_str) % 2 != 0:
-      clean_str = clean_str[:-1]
-    return bytes.fromhex(clean_str)
+    return hex_string_to_bytes(data_bytes)
   except Exception as e:
     print(f"[!] Error converting hex string: {e}")
     return b""
