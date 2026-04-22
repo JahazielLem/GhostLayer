@@ -16,7 +16,16 @@ A GTK based application for IoT communications.
 sudo apt update
 sudo apt install libpcap
 sudo apt-get install libpcap-dev
+sudo apt install libgtk-3-dev
 
+# Ghostlayer
+mkdir build
+cd build
+cmake ..
+make
+
+
+# Required for GNU Radio
 
 git clone https://github.com/tapparelj/gr-lora_sdr.git
 cd gr-lora_sdr
