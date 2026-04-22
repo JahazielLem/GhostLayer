@@ -78,7 +78,7 @@ def hex_char_to_nibble(c: int) -> int:
   return -1
 
 
-def hex_string_to_bytes(input_bytes: bytes) -> bytes:
+def hex_to_bytes(input_bytes: bytes) -> bytes:
   output = bytearray()
   i = 0
   length = len(input_bytes)
@@ -104,7 +104,7 @@ def hex_string_to_bytes(input_bytes: bytes) -> bytes:
 
 def hex_string_to_bytes(data_bytes: bytes) -> bytes:
   try:
-    return hex_string_to_bytes(data_bytes)
+    return hex_to_bytes(data_bytes)
   except Exception as e:
     print(f"[!] Error converting hex string: {e}")
     return b""
