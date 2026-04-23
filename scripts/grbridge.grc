@@ -290,7 +290,7 @@ blocks:
     alias: ''
     attenuation1: tx_gain
     bandwidth: tx_bandwidth
-    buffer_size: '22768'
+    buffer_size: '1000'
     comment: ''
     cyclic: 'False'
     filter: ''

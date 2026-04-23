@@ -87,7 +87,7 @@ class bridge(gr.top_block):
         self.iio_pluto_source_0.set_rfdc(True)
         self.iio_pluto_source_0.set_bbdc(True)
         self.iio_pluto_source_0.set_filter_params('Auto', '', 0, 0)
-        self.iio_pluto_sink_0 = iio.fmcomms2_sink_fc32(pluto_source if pluto_source else iio.get_pluto_uri(), [True, True], 22768, False)
+        self.iio_pluto_sink_0 = iio.fmcomms2_sink_fc32(pluto_source if pluto_source else iio.get_pluto_uri(), [True, True], 1000, False)
         self.iio_pluto_sink_0.set_len_tag_key('')
         self.iio_pluto_sink_0.set_bandwidth(tx_bandwidth)
         self.iio_pluto_sink_0.set_frequency(tx_frequency)
