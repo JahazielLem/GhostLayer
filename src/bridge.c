@@ -83,7 +83,6 @@ void bridge_engine_send(const uint8_t *data, const int len) {
     return;
   }
   write(server_context.client_fd, data, len);
-  write(server_context.client_fd, "\n", 1);
 }
 
 void bridge_engine_close(void) {
