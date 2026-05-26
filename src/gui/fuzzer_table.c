@@ -20,6 +20,7 @@ static GtkWidget *treeview = NULL;
 static GList *list_packet_buffer = NULL;
 
 static void on_menu_copy_hex_data(GtkMenuItem *item, gpointer user_data) {
+  (void)item;
   GtkWidget *treeview = GTK_WIDGET(user_data);
   GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
   GtkTreeModel *model;
@@ -37,6 +38,7 @@ static void on_menu_copy_hex_data(GtkMenuItem *item, gpointer user_data) {
 }
 
 static void on_menu_copy_hexdump_data(GtkMenuItem *item, gpointer user_data) {
+  (void)item;
   GtkWidget *treeview = GTK_WIDGET(user_data);
   GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
   GtkTreeModel *model;
@@ -56,6 +58,7 @@ static void on_menu_copy_hexdump_data(GtkMenuItem *item, gpointer user_data) {
 }
 
 static gboolean packet_viewer_on_button_press(GtkWidget *treeview, GdkEventButton *event, gpointer user_data) {
+  (void)user_data;
   if (event->type == GDK_BUTTON_PRESS && event->button == GDK_BUTTON_SECONDARY) {
     GtkTreeView *tv = GTK_TREE_VIEW(treeview);
     GtkTreePath *path;

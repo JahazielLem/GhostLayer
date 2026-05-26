@@ -20,27 +20,55 @@ GtkWidget *spin_frequency;
 GtkWidget *combo_bandwidth;
 GtkWidget *combo_spread_factor;
 
+static uint32_t radio_frequency = 91600;
+static uint16_t radio_bandwidth = 25000;
+static uint16_t radio_spread_factor = 7;
+
+static void plugin_radio_update_state(void) {
+  if (spin_frequency) {
+    const double frequency = gtk_spin_button_get_value(GTK_SPIN_BUTTON(spin_frequency));
+    radio_frequency = (uint32_t)(frequency * 100.0f);
+  }
+
+  if (combo_bandwidth) {
+    gchar *text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_bandwidth));
+    if (text) {
+      char *end;
+      const float bandwidth = strtof(text, &end);
+      radio_bandwidth = (uint16_t)(bandwidth * 100.0f);
+      g_free(text);
+    }
+  }
+
+  if (combo_spread_factor) {
+    gchar *text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_spread_factor));
+    if (text) {
+      char *end;
+      radio_spread_factor = (uint16_t)strtol(text, &end, 10);
+      g_free(text);
+    }
+  }
+}
+
+static void plugin_radio_on_change(GtkWidget *widget, gpointer user_data) {
+  (void)widget;
+  (void)user_data;
+  plugin_radio_update_state();
+}
+
 uint32_t plugin_radio_get_frequency(void) {
-  const double frequency = gtk_spin_button_get_value(GTK_SPIN_BUTTON(spin_frequency));
-  return (uint32_t)(frequency * 100.0f);
+  plugin_radio_update_state();
+  return radio_frequency;
 }
 
 uint16_t plugin_radio_get_bandwidth(void) {
-  gchar *text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_bandwidth));
-  if (!text) return 0;
-  char *end;
-  const float bandwidth = strtof(text, &end);
-  g_free(text);
-  return (uint16_t)(bandwidth * 100.0f);
+  plugin_radio_update_state();
+  return radio_bandwidth;
 }
 
 uint16_t plugin_radio_get_spread_factor(void) {
-  gchar *text = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(combo_spread_factor));
-  if (!text) return 0;
-  char *end;
-  const long sf = strtol(text, &end, 10);
-  g_free(text);
-  return (uint16_t)sf;
+  plugin_radio_update_state();
+  return radio_spread_factor;
 }
 
 gint plugin_radio_get_delay(void) {
@@ -129,4 +157,9 @@ void plugin_radio_create(GtkWidget *parent) {
     gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(combo_spread_factor), NULL, buf);
   }
   gtk_combo_box_set_active(GTK_COMBO_BOX(combo_spread_factor), 2);
+
+  g_signal_connect(spin_frequency, "value-changed", G_CALLBACK(plugin_radio_on_change), NULL);
+  g_signal_connect(combo_bandwidth, "changed", G_CALLBACK(plugin_radio_on_change), NULL);
+  g_signal_connect(combo_spread_factor, "changed", G_CALLBACK(plugin_radio_on_change), NULL);
+  plugin_radio_update_state();
 }

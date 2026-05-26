@@ -39,6 +39,7 @@ void plugin_spp_parse_packet(uint8_t *buffer, int length) {
     gtk_spin_button_set_value(GTK_SPIN_BUTTON(spin_spp_counter), spp_get_sequence_count(&space_packet));
 
     gtk_combo_box_set_active(GTK_COMBO_BOX(combo_spp_type), spp_get_type(&space_packet));
+    gtk_combo_box_set_active(GTK_COMBO_BOX(combo_spp_sechdr_flag), spp_get_secondary_header(&space_packet));
     gtk_combo_box_set_active(GTK_COMBO_BOX(combo_spp_seq_flag), spp_get_sequence_flags(&space_packet));
   }
 }
@@ -49,7 +50,6 @@ space_packet_t *plugin_spp_build_packet(uint8_t*buffer, uint16_t length) {
 
   const uint16_t apid = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spin_spp_apid));
   const uint8_t type = gtk_combo_box_get_active(GTK_COMBO_BOX(combo_spp_type));
-  // TODO: Fix the secondary header logic to add
   const uint8_t sec_hdr = gtk_combo_box_get_active(GTK_COMBO_BOX(combo_spp_sechdr_flag));
   const uint8_t seq_flag = gtk_combo_box_get_active(GTK_COMBO_BOX(combo_spp_seq_flag));
   const uint16_t seq_counter = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(spin_spp_counter));
@@ -59,13 +59,21 @@ space_packet_t *plugin_spp_build_packet(uint8_t*buffer, uint16_t length) {
   const uint16_t len = (buffer != NULL && length > 0) ? length : 1;
 
   counter.apid = apid;
-  // TODO: Add sec header logic
+  const uint8_t default_sec_hdr[1] = {0x00};
   if (type == SPP_PTYPE_TM) {
     counter.tm = seq_counter;
-    spp_tm_build_packet(&space_packet, seq_flag, ptr, len, &counter);
+    if (sec_hdr == SPP_SECHEAD_FLAG_PRESENT) {
+      spp_tm_build_packet_w_sec_hdr(&space_packet, seq_flag, default_sec_hdr, sizeof(default_sec_hdr), ptr, len, &counter);
+    } else {
+      spp_tm_build_packet(&space_packet, seq_flag, ptr, len, &counter);
+    }
   }else {
     counter.tc = seq_counter;
-    spp_tc_build_packet(&space_packet, seq_flag, ptr, len, &counter);
+    if (sec_hdr == SPP_SECHEAD_FLAG_PRESENT) {
+      spp_tc_build_packet_w_sec_hdr(&space_packet, seq_flag, default_sec_hdr, sizeof(default_sec_hdr), ptr, len, &counter);
+    } else {
+      spp_tc_build_packet(&space_packet, seq_flag, ptr, len, &counter);
+    }
   }
   return &space_packet;
 }

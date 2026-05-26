@@ -67,3 +67,7 @@ elseif (MSVC)
 endif()
 
 message(STATUS "Targets: ${ccsds_SOURCE_DIR}")
+
+install(TARGETS ghostlayer RUNTIME DESTINATION bin)
+install(PROGRAMS scripts/worker.py scripts/bridge.py DESTINATION share/ghostlayer/scripts)
+install(FILES scripts/grbridge.grc DESTINATION share/ghostlayer/scripts)

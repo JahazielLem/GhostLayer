@@ -21,7 +21,6 @@ try:
 except ImportError:
   bridge = None
 
-
 DEFAULT_PLUTO_SOURCE = "ip:pluto.local"
 DEFAULT_DOWNLINK_ADDRESS = "tcp://127.0.0.1:5009"
 DEFAULT_UPLINK_ADDRESS = "tcp://127.0.0.1:5007"
@@ -39,15 +38,6 @@ PCAP_VERSION_MAJOR = 2
 PCAP_VERSION_MINOR = 4
 PCAP_MAX_PACKET_SIZE = 0x0000FFFF
 
-
-def bytes_to_pmt_message(data: bytes):
-  return pmt.init_u8vector(len(data), list(data))
-
-
-def serialize_bytes(data: bytes) -> bytes:
-  return pmt.serialize_str(bytes_to_pmt_message(data))
-
-
 def pmt_message_to_bytes(message) -> bytes:
   payload = pmt.cdr(message) if pmt.is_pair(message) else message
 
@@ -58,8 +48,7 @@ def pmt_message_to_bytes(message) -> bytes:
     return pmt.symbol_to_string(payload).encode("latin-1")
 
   if pmt.is_blob(payload):
-    blob = pmt.blob_data(payload)
-    return bytes(blob)
+    return bytes(pmt.blob_data(payload))
 
   raise TypeError(f"Unsupported PMT payload type: {payload}")
 
@@ -70,19 +59,8 @@ def zmq_frame_to_bytes(frame: bytes) -> bytes:
   except Exception:
     return frame
 
-
 def pcap_header(interface=148):
-  return struct.pack(
-    PCAP_GLOBAL_HEADER_FORMAT,
-    PCAP_MAGIC_NUMBER,
-    PCAP_VERSION_MAJOR,
-    PCAP_VERSION_MINOR,
-    0,
-    0,
-    PCAP_MAX_PACKET_SIZE,
-    interface,
-  )
-
+  return struct.pack(PCAP_GLOBAL_HEADER_FORMAT, PCAP_MAGIC_NUMBER, PCAP_VERSION_MAJOR, PCAP_VERSION_MINOR, 0, 0, PCAP_MAX_PACKET_SIZE, interface)
 
 class Pcap:
   def __init__(self, packet: bytes, timestamp_seconds: float):
@@ -93,41 +71,67 @@ class Pcap:
   def pack(self):
     int_timestamp = int(self.timestamp_seconds)
     timestamp_offset = int((self.timestamp_seconds - int_timestamp) * 1_000_000)
-    return (
-      struct.pack(
-        PCAP_PACKET_HEADER_FORMAT,
-        int_timestamp,
-        timestamp_offset,
-        len(self.packet),
-        len(self.packet),
-      )
-      + self.packet
-    )
+    return struct.pack(PCAP_PACKET_HEADER_FORMAT, int_timestamp, timestamp_offset, len(self.packet), len(self.packet)) + self.packet
 
   def get(self):
     return self.pcap_packet
-
 
 def hexdump(data: bytes, width: int = 16) -> str:
   lines = []
   for offset in range(0, len(data), width):
     chunk = data[offset:offset + width]
-    hex_bytes = " ".join(f"{b:02X}" for b in chunk)
+    hex_bytes = ' '.join(f"{b:02X}" for b in chunk)
     hex_bytes = hex_bytes.ljust(width * 3)
-    ascii_bytes = "".join(
-      chr(b) if chr(b) in string.printable and b >= 0x20 else "."
-      for b in chunk
-    )
+    ascii_bytes = ''.join(chr(b) if chr(b) in string.printable and b >= 0x20 else '.' for b in chunk)
     lines.append(f"{offset:08X}  {hex_bytes}  {ascii_bytes}")
   return "\n".join(lines)
 
+def hex_char_to_nibble(c: int) -> int:
+  if ord('0') <= c <= ord('9'):
+    return c - ord('0')
+  if ord('A') <= c <= ord('F'):
+    return c - ord('A') + 10
+  if ord('a') <= c <= ord('f'):
+    return c - ord('a') + 10
+  return -1
+
+
+def hex_to_bytes(input_bytes: bytes) -> bytes:
+  output = bytearray()
+  i = 0
+  length = len(input_bytes)
+
+  while i < length:
+    if input_bytes[i] == ord(' '):
+      i += 1
+      continue
+
+    if i + 1 >= length:
+      break
+
+    high = hex_char_to_nibble(input_bytes[i])
+    low = hex_char_to_nibble(input_bytes[i + 1])
+
+    if high < 0 or low < 0:
+      break
+
+    output.append((high << 4) | low)
+    i += 2
+
+  return bytes(output)
+
+def hex_string_to_bytes(data_bytes: bytes) -> bytes:
+  try:
+    return hex_to_bytes(data_bytes)
+  except Exception as e:
+    print(f"[!] Error converting hex string: {e}")
+    return b""
 
 def show_args_config(args):
   print("========== Configuration ==========")
   for k, v in vars(args).items():
     print(f"{k:25}: {v}")
   print("----------------------------------\n")
-
 
 class Controller:
   def __init__(self, args):
@@ -144,11 +148,13 @@ class Controller:
     self.last_reconnect_time = 0
     self.bridge_rx_buffer = bytearray()
     self.last_tx_config = None
+    self.rx_recovery_timer = None
 
   def file_write_frame(self, data: bytes):
     if self.f_output is not None:
       ts = time.time_ns()
-      header = struct.pack("<QH", ts, len(data))
+      length = len(data)
+      header = struct.pack("<QH", ts, length)
       self.f_output.write(header)
       self.f_output.write(data)
       self.f_output.flush()
@@ -162,7 +168,8 @@ class Controller:
 
   def pcap_write_frame(self, data: bytes):
     if self.f_pcap_output is not None:
-      self.f_pcap_output.write(Pcap(data, time.time()).get())
+      pcap_packet = Pcap(data, time.time()).get()
+      self.f_pcap_output.write(pcap_packet)
       self.f_pcap_output.flush()
 
   def pcap_open(self):
@@ -182,6 +189,13 @@ class Controller:
       self.tb.set_zmq_address(self.args.downlink_address)
       self.tb.set_pluto_source(str(self.args.pluto_address))
       self.tb.set_tx_zmq_address(str(self.args.uplink_address))
+      self.tb.set_rx_gain_mode(self.args.rx_gain_mode)
+      self.tb.set_rx_gain(self.args.rx_gain)
+      self.last_tx_config = (
+        self.tb.get_tx_frequency(),
+        self.tb.get_tx_bandwidth(),
+        self.tb.get_tx_spread_factor(),
+      )
     else:
       print("[!] Warning: bridge module not found. Running in ZMQ-only mode.")
 
@@ -210,27 +224,54 @@ class Controller:
       print(f"[!] Payload length mismatch: header={payload_len}, actual={len(payload)}")
 
     print(f"\nSending payload to radio: {payload.hex()}")
-    print(
-      f"FQ: {hz_freq} | BW: {hz_bw} | SF: {spreadfactor} | "
-      f"Payload len: {len(payload)}"
-    )
+    print(f"FQ: {hz_freq} | BW: {hz_bw} | SF: {spreadfactor} | Payload len: {len(payload)}")
 
-    if self.tb and self.last_tx_config != (hz_freq, hz_bw, spreadfactor):
+    if self.tb:
       self.tb.lock()
       try:
-        self.tb.set_tx_frequency(hz_freq)
-        self.tb.set_tx_bandwidth(hz_bw)
-        self.tb.set_tx_spread_factor(spreadfactor)
+        last_hz_freq, last_hz_bw, last_spreadfactor = self.last_tx_config
+        if last_hz_freq != hz_freq:
+          self.tb.set_tx_frequency(hz_freq)
+        if last_hz_bw != hz_bw:
+          self.tb.set_tx_bandwidth(hz_bw)
+        if last_spreadfactor != spreadfactor:
+          self.tb.set_tx_spread_factor(spreadfactor)
         self.last_tx_config = (hz_freq, hz_bw, spreadfactor)
       finally:
         self.tb.unlock()
 
-    pdu_bytes = serialize_bytes(payload)
-    print("[+] Sending byte payload via ZMQ...")
+    pdu_bytes = pmt.serialize_str(pmt.intern(payload.hex()))
+    print("[+] Sending hex payload via ZMQ...")
     try:
       self.txsock.send(pdu_bytes, flags=zmq.NOBLOCK)
+      self.schedule_rx_recovery()
     except zmq.error.Again:
       print("[!] TX Queue full. Packet dropped.")
+
+  def recover_rx_after_tx(self):
+    if not self.running or not self.tb:
+      return
+
+    self.tb.lock()
+    try:
+      self.tb.recover_rx_after_tx()
+    finally:
+      self.tb.unlock()
+    print("[*] RX recovered after TX")
+
+  def schedule_rx_recovery(self):
+    if not self.tb or self.args.rx_recover_delay < 0:
+      return
+
+    if self.rx_recovery_timer is not None:
+      self.rx_recovery_timer.cancel()
+
+    self.rx_recovery_timer = threading.Timer(
+      self.args.rx_recover_delay,
+      self.recover_rx_after_tx,
+    )
+    self.rx_recovery_timer.daemon = True
+    self.rx_recovery_timer.start()
 
   def connect_to_bridge(self):
     now = time.time()
@@ -316,6 +357,7 @@ class Controller:
     self.txsock = self.txctx.socket(zmq.PUSH)
     self.txsock.connect(self.args.uplink_address)
     self.txsock.setsockopt(zmq.LINGER, 0)
+
     self.txsock.setsockopt(zmq.RCVHWM, 20)
     self.txsock.setsockopt(zmq.SNDHWM, 20)
 
@@ -327,6 +369,8 @@ class Controller:
     if self.tb:
       self.tb.stop()
       self.tb.wait()
+    if self.rx_recovery_timer is not None:
+      self.rx_recovery_timer.cancel()
     if self.rxsock:
       self.rxsock.close(0)
     if self.rxctx:
@@ -401,15 +445,11 @@ class Controller:
     except KeyboardInterrupt:
       self.stop()
 
-
 def main():
-  parser = argparse.ArgumentParser(
-    prog="pylora_bytes_bridge",
-    description="GNU Radio LoRa bridge with direct byte payloads",
-  )
+  parser = argparse.ArgumentParser(prog="pylora_bytes_bridge", description="GNU Radio LoRa bridge with direct byte payloads")
   parser.add_argument("-f", "--frequency", default=DOWNLINK_FREQ)
   parser.add_argument("-bw", "--bandwidth", default=DOWNLINK_BW)
-  parser.add_argument("-sf", "--spread-factor", default=DOWNLINK_SF)
+  parser.add_argument("-sf", "--spread-factor", "--spread_factor", default=DOWNLINK_SF)
   parser.add_argument("-da", "--downlink-address", default=DEFAULT_DOWNLINK_ADDRESS)
   parser.add_argument("-ua", "--uplink-address", default=DEFAULT_UPLINK_ADDRESS)
   parser.add_argument("-o", "--output-file")
@@ -418,13 +458,15 @@ def main():
   parser.add_argument("-m", "--mode", choices=["tm", "tc"], default="tm")
   parser.add_argument("--bridge-host", default=DEFAULT_BRIDGE_HOST)
   parser.add_argument("--bridge-port", type=int, default=DEFAULT_BRIDGE_PORT)
+  parser.add_argument("--rx-gain-mode", default="fast_attack", choices=["manual", "slow_attack", "fast_attack", "hybrid"])
+  parser.add_argument("--rx-gain", type=int, default=48)
+  parser.add_argument("--rx-recover-delay", type=float, default=0.5)
 
   args = parser.parse_args()
   show_args_config(args)
 
   ctrl = Controller(args)
   ctrl.run()
-
 
 if __name__ == "__main__":
   main()

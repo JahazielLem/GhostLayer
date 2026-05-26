@@ -51,6 +51,7 @@ GtkWidget *packet_hexdump_create(void);
 void about_dialog_create(GtkApplication *app, gpointer user_data);
 void iface_dialog_create(GtkWidget *widget, gpointer data);
 void packet_sender_dialog_create(GtkWidget *widget, gpointer data);
+void packet_sender_dialog_open_packet(proto_packet_t *packet);
 void intruder_gui_create(void);
 
 /* Handlers */

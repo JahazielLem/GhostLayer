@@ -196,40 +196,43 @@ uint8_t *hex_string_to_uint8_buffer_token(const char *hex_data, int *out_length)
 }
 
 uint8_t *hex_string_to_uint8_buffer(const char *hex_data, int *out_length) {
+  *out_length = 0;
   if (!hex_data) {
-    *out_length = 0;
-    return NULL;
-  }
-
-  const size_t len = strlen(hex_data);
-  int byte_count = 0;
-  for (size_t i = 0; i < len; i++) {
-    if (hex_data[i] != ' ')
-      byte_count++;
-  }
-  byte_count = byte_count / 2;
-  if (byte_count == 0) {
-    *out_length = 0;
-    return NULL;
-  }
-
-  uint8_t *buffer = (uint8_t *) malloc(byte_count * sizeof(uint8_t));
-  if (!buffer) {
-    *out_length = 0;
     return NULL;
   }
 
   const char *ptr = hex_data;
-  int index = 0;
-  while (*ptr && index < byte_count) {
-    const char hex_byte[3] = {ptr[0], ptr[1], '\0'};
-    buffer[index] = (uint8_t) strtol(hex_byte, NULL, 16);
-    index++;
-    ptr += 2;
-    while (*ptr == ' ')
-      ptr++;
+  while (isspace((unsigned char)*ptr)) ptr++;
+  if (ptr[0] == '0' && (ptr[1] == 'x' || ptr[1] == 'X')) ptr += 2;
+
+  GString *digits = g_string_new(NULL);
+  for (; *ptr; ptr++) {
+    if (isspace((unsigned char)*ptr)) continue;
+    if (!isxdigit((unsigned char)*ptr)) {
+      g_string_free(digits, TRUE);
+      return NULL;
+    }
+    g_string_append_c(digits, *ptr);
   }
 
+  if (digits->len == 0 || digits->len % 2 != 0) {
+    g_string_free(digits, TRUE);
+    return NULL;
+  }
+
+  const int byte_count = (int)(digits->len / 2);
+  uint8_t *buffer = (uint8_t *) malloc(byte_count * sizeof(uint8_t));
+  if (!buffer) {
+    g_string_free(digits, TRUE);
+    return NULL;
+  }
+
+  for (int index = 0; index < byte_count; index++) {
+    const char hex_byte[3] = {digits->str[index * 2], digits->str[index * 2 + 1], '\0'};
+    buffer[index] = (uint8_t) strtol(hex_byte, NULL, 16);
+  }
+
+  g_string_free(digits, TRUE);
   *out_length = byte_count;
   return buffer;
 }
@@ -289,5 +292,17 @@ uint8_t *ascii_to_uint8_buffer(const char *input, int *out_length) {
 
   uint8_t *buffer = g_malloc(len);
   memcpy(buffer, input, len);
+  return buffer;
+}
+
+uint8_t *text_to_uint8_buffer(const char *input, int *out_length) {
+  *out_length = 0;
+  char *hex_data = validate_and_convert_to_hex(input);
+  if (!hex_data) {
+    return NULL;
+  }
+
+  uint8_t *buffer = hex_string_to_uint8_buffer(hex_data, out_length);
+  g_free(hex_data);
   return buffer;
 }

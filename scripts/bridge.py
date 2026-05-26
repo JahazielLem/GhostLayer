@@ -45,6 +45,8 @@ class bridge(gr.top_block):
         self.tx_samp_rate = tx_samp_rate = int(tx_bandwidth)
         self.tx_gain = tx_gain = 0
         self.tx_frequency = tx_frequency = 918000000
+        self.rx_gain = rx_gain = 48
+        self.rx_gain_mode = rx_gain_mode = 'fast_attack'
         self.spread_factor = spread_factor = 7
         self.pluto_source = pluto_source = "ip:pluto.local"
         self.impl_header = impl_header = False
@@ -81,8 +83,8 @@ class bridge(gr.top_block):
         self.iio_pluto_source_0.set_len_tag_key('packet_len')
         self.iio_pluto_source_0.set_frequency(frequency)
         self.iio_pluto_source_0.set_samplerate(samp_rate)
-        self.iio_pluto_source_0.set_gain_mode(0, 'slow_attack')
-        self.iio_pluto_source_0.set_gain(0, 64)
+        self.iio_pluto_source_0.set_gain_mode(0, rx_gain_mode)
+        self.iio_pluto_source_0.set_gain(0, rx_gain)
         self.iio_pluto_source_0.set_quadrature(True)
         self.iio_pluto_source_0.set_rfdc(True)
         self.iio_pluto_source_0.set_bbdc(True)
@@ -181,6 +183,27 @@ class bridge(gr.top_block):
     def set_tx_frequency(self, tx_frequency):
         self.tx_frequency = tx_frequency
         self.iio_pluto_sink_0.set_frequency(self.tx_frequency)
+
+    def get_rx_gain(self):
+        return self.rx_gain
+
+    def set_rx_gain(self, rx_gain):
+        self.rx_gain = rx_gain
+        self.iio_pluto_source_0.set_gain(0, self.rx_gain)
+
+    def get_rx_gain_mode(self):
+        return self.rx_gain_mode
+
+    def set_rx_gain_mode(self, rx_gain_mode):
+        self.rx_gain_mode = rx_gain_mode
+        self.iio_pluto_source_0.set_gain_mode(0, self.rx_gain_mode)
+
+    def recover_rx_after_tx(self):
+        self.iio_pluto_source_0.set_gain_mode(0, self.rx_gain_mode)
+        self.iio_pluto_source_0.set_gain(0, self.rx_gain)
+        self.iio_pluto_source_0.set_frequency(self.frequency)
+        self.iio_pluto_source_0.set_samplerate(self.samp_rate)
+        self.iio_pluto_source_0.set_filter_params('Auto', '', 0, 0)
 
     def get_spread_factor(self):
         return self.spread_factor

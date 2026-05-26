@@ -34,6 +34,9 @@ typedef struct {
   GtkWidget *entry_add;
   GtkListStore *list_store;
   GList *payload_list;
+  // Character Blocks
+  GtkWidget *block_length;
+  GtkWidget *block_pattern;
 } advanced_gui_ctx_t;
 
 typedef struct {
@@ -61,6 +64,10 @@ typedef struct {
   int num_tokens;
   int *current_indices;
   int *max_items;
+  gint strategy;
+  int active_token;
+  int sent_count;
+  int total_count;
   gint timeout;
   gboolean running;
 } campaign_t;
@@ -78,33 +85,178 @@ static GtkWidget *combo_gen;
 static void on_combo_attack_change(GtkComboBox *combo, gpointer data);
 static void on_token_selection_changed(GtkComboBox *combo, gpointer data);
 
-static void init_cluster_bomb(void) {
+typedef struct {
+  gint start;
+  gint end;
+  gchar *value;
+} token_replacement_t;
+
+static void free_token_context(advanced_marked_ctx_t *token) {
+  if (!token) return;
+  g_list_free_full(token->data.payload_list, g_free);
+  g_free(token);
+}
+
+static void campaign_cleanup(void) {
+  g_clear_pointer(&campaign.current_indices, g_free);
+  g_clear_pointer(&campaign.max_items, g_free);
+  campaign.num_tokens = 0;
+  campaign.active_token = 0;
+  campaign.sent_count = 0;
+  campaign.total_count = 0;
+  campaign.running = FALSE;
+}
+
+static int token_payload_count(const advanced_marked_ctx_t *token) {
+  if (token->attack_type == 0) {
+    const double diff = token->data.numeric_to - token->data.numeric_from;
+    if (token->data.numeric_step <= 0 || diff < 0) return 1;
+    return (int)(diff / token->data.numeric_step) + 1;
+  }
+  if (token->attack_type == 1) {
+    const int count = (int)g_list_length(token->data.payload_list);
+    return count > 0 ? count : 1;
+  }
+  return 1;
+}
+
+static gchar *token_original_text(const advanced_marked_ctx_t *token) {
+  GtkTextIter start, end;
+  gtk_text_buffer_get_iter_at_mark(gui_ctx.template_buffer, &start, token->start_mark);
+  gtk_text_buffer_get_iter_at_mark(gui_ctx.template_buffer, &end, token->end_mark);
+  return gtk_text_buffer_get_text(gui_ctx.template_buffer, &start, &end, FALSE);
+}
+
+static int token_original_hex_width(const advanced_marked_ctx_t *token) {
+  gchar *original = token_original_text(token);
+  int width = 0;
+  for (char *p = original; p != NULL && *p; p++) {
+    if (g_ascii_isxdigit(*p)) width++;
+  }
+  g_free(original);
+  if (width <= 0) width = 2;
+  if (width % 2 != 0) width++;
+  return width;
+}
+
+static gchar *token_value_for_index(advanced_marked_ctx_t *token, int current_idx) {
+  if (token->attack_type == 0) {
+    const int width = token_original_hex_width(token);
+    const guint64 actual_val = (guint64)(token->data.numeric_from + (current_idx * token->data.numeric_step));
+    return g_strdup_printf("%0*" G_GINT64_MODIFIER "X", width, actual_val);
+  }
+
+  if (token->attack_type == 1) {
+    gchar *payload_str = g_list_nth_data(token->data.payload_list, current_idx);
+    if (payload_str != NULL) {
+      gchar *hex_payload = validate_and_convert_to_hex(payload_str);
+      if (hex_payload != NULL) return hex_payload;
+    }
+  }
+
+  if (token->attack_type == 2) {
+    const gint length = MAX(token->data.bof_length, 1);
+    const gint pattern_type = token->data.bof_pattern_type;
+    GString *pattern = g_string_new(NULL);
+    for (gint i = 0; i < length; i++) {
+      guint8 byte = 0x41;
+      if (pattern_type == 1) byte = 0x00;
+      if (pattern_type == 2) byte = 0xFF;
+      if (pattern_type == 3) byte = (guint8)(i & 0xFF);
+      g_string_append_printf(pattern, "%02X", byte);
+    }
+    return g_string_free(pattern, FALSE);
+  }
+
+  return token_original_text(token);
+}
+
+static gint compare_replacement_desc(gconstpointer a, gconstpointer b) {
+  const token_replacement_t *ra = (const token_replacement_t *)a;
+  const token_replacement_t *rb = (const token_replacement_t *)b;
+  return rb->start - ra->start;
+}
+
+static gchar *build_replacement_label(GArray *replacements) {
+  GString *label = g_string_new(NULL);
+  for (guint i = 0; i < replacements->len; i++) {
+    token_replacement_t *replacement = &g_array_index(replacements, token_replacement_t, i);
+    if (i > 0) g_string_append(label, ", ");
+    g_string_append(label, replacement->value);
+  }
+  return g_string_free(label, FALSE);
+}
+
+static gboolean build_campaign_packet(uint8_t **packet, int *packet_len, gchar **payload_label) {
+  GtkTextIter template_start, template_end;
+  gtk_text_buffer_get_bounds(gui_ctx.template_buffer, &template_start, &template_end);
+  gchar *template_text = gtk_text_buffer_get_text(gui_ctx.template_buffer, &template_start, &template_end, FALSE);
+  GString *packet_hex = g_string_new(template_text);
+  GArray *replacements = g_array_new(FALSE, TRUE, sizeof(token_replacement_t));
+
+  int token_index = 0;
+  for (GList *l = marked_list; l != NULL; l = l->next, token_index++) {
+    if (campaign.strategy == 0 && token_index != campaign.active_token) continue;
+
+    advanced_marked_ctx_t *token = (advanced_marked_ctx_t *)l->data;
+    GtkTextIter start, end;
+    gtk_text_buffer_get_iter_at_mark(gui_ctx.template_buffer, &start, token->start_mark);
+    gtk_text_buffer_get_iter_at_mark(gui_ctx.template_buffer, &end, token->end_mark);
+
+    token_replacement_t replacement = {
+      .start = gtk_text_iter_get_offset(&start),
+      .end = gtk_text_iter_get_offset(&end),
+      .value = token_value_for_index(token, campaign.current_indices[token_index])
+    };
+    g_array_append_val(replacements, replacement);
+  }
+
+  g_array_sort(replacements, compare_replacement_desc);
+
+  for (guint i = 0; i < replacements->len; i++) {
+    token_replacement_t *replacement = &g_array_index(replacements, token_replacement_t, i);
+    gchar *start_ptr = g_utf8_offset_to_pointer(packet_hex->str, replacement->start);
+    gchar *end_ptr = g_utf8_offset_to_pointer(packet_hex->str, replacement->end);
+    const gsize start_byte = (gsize)(start_ptr - packet_hex->str);
+    const gsize end_byte = (gsize)(end_ptr - packet_hex->str);
+    g_string_erase(packet_hex, (gssize)start_byte, (gssize)(end_byte - start_byte));
+    g_string_insert(packet_hex, (gssize)start_byte, replacement->value);
+  }
+
+  *payload_label = build_replacement_label(replacements);
+  *packet = hex_string_to_uint8_buffer(packet_hex->str, packet_len);
+
+  for (guint i = 0; i < replacements->len; i++) {
+    token_replacement_t *replacement = &g_array_index(replacements, token_replacement_t, i);
+    g_free(replacement->value);
+  }
+  g_array_free(replacements, TRUE);
+  g_string_free(packet_hex, TRUE);
+  g_free(template_text);
+
+  return *packet != NULL && *packet_len > 0;
+}
+
+static void init_campaign(gint strategy) {
+  campaign_cleanup();
   campaign.num_tokens = g_list_length(marked_list);
+  campaign.strategy = strategy;
 
   if (campaign.num_tokens == 0) return;
 
   campaign.current_indices = g_new0(int, campaign.num_tokens);
   campaign.max_items = g_new0(int, campaign.num_tokens);
+  campaign.total_count = strategy == 0 ? 0 : 1;
 
   int i = 0;
   for (GList *l = marked_list; l != NULL; l = l->next) {
     const advanced_marked_ctx_t *token = (advanced_marked_ctx_t *)l->data;
-
-    if (token->attack_type == 0) {
-      const double diff = token->data.numeric_to - token->data.numeric_from;
-      if (token->data.numeric_step > 0 && diff >= 0) {
-        campaign.max_items[i] = (int)(diff / token->data.numeric_step) + 1;
-      } else {
-        campaign.max_items[i] = 1;
-      }
-    } else if (token->attack_type == 1) {
-      campaign.max_items[i] = (int)g_list_length(token->data.payload_list);
-      if (campaign.max_items[i] == 0) campaign.max_items[i] = 1;
-    } else {
-      campaign.max_items[i] = 1;
-    }
+    campaign.max_items[i] = token_payload_count(token);
+    if (strategy == 0) campaign.total_count += campaign.max_items[i];
+    else campaign.total_count *= campaign.max_items[i];
     i++;
   }
+  campaign.total_count = MAX(campaign.total_count, 1);
 }
 
 static gboolean advance_odometer(void) {
@@ -118,71 +270,76 @@ static gboolean advance_odometer(void) {
   return FALSE;
 }
 
+static gboolean advance_sniper(void) {
+  while (campaign.active_token < campaign.num_tokens) {
+    campaign.current_indices[campaign.active_token]++;
+    if (campaign.current_indices[campaign.active_token] < campaign.max_items[campaign.active_token]) {
+      return TRUE;
+    }
+    campaign.current_indices[campaign.active_token] = 0;
+    campaign.active_token++;
+    if (campaign.active_token < campaign.num_tokens) {
+      return TRUE;
+    }
+  }
+  return FALSE;
+}
+
 static gboolean fuzzer_gui_progress_worker(gpointer user_data) {
   GtkWidget *window = (GtkWidget*)user_data;
 
   if (!campaign.running) return FALSE;
 
-  g_print("--- Sending Combination ---\n");
-  int i = 0;
-  for (GList *l = marked_list; l != NULL; l = l->next) {
-    advanced_marked_ctx_t *token = (advanced_marked_ctx_t *)l->data;
-    int current_idx = campaign.current_indices[i];
-
-    if (token->attack_type == 0) {
-      double actual_val = token->data.numeric_from + (current_idx * token->data.numeric_step);
-      g_print("Token %d (Numeric): %0.2f\n", token->id, actual_val);
-
-      // TODO: Replace '§' markers in your hex buffer with this actual_val
-
-    } else if (token->attack_type == 1) {
-      if (token->data.payload_list != NULL) {
-        gchar *payload_str = (gchar *)g_list_nth_data(token->data.payload_list, current_idx);
-        g_print("Token %d (List): %s\n", token->id, payload_str);
-
-        // TODO: Replace '§' markers in your hex buffer with this payload_str
-      }
-    }
-    i++;
+  uint8_t *packet = NULL;
+  int packet_len = 0;
+  gchar *payload_label = NULL;
+  if (!build_campaign_packet(&packet, &packet_len, &payload_label)) {
+    campaign.running = FALSE;
+    alert_show_dialog(GTK_WINDOW(window), ALERT_ERROR, "Advanced Builder", "Generated packet is not valid hex.");
+    g_free(payload_label);
+    return FALSE;
   }
 
-  // --- 2. Transmit Packet ---
-  // app_state_transmit_packet_with_config(...);
+  app_state_transmit_packet_with_config(packet, (uint16_t)packet_len);
+  fuzzer_gui_packet_viewer_add_list_payload(payload_label, packet, packet_len);
+  g_free(packet);
 
-  // --- 3. Advance to Next Combination ---
-  gboolean attack_finished = !advance_odometer();
+  campaign.sent_count++;
+  const gboolean has_next = campaign.strategy == 0 ? advance_sniper() : advance_odometer();
+  gboolean attack_finished = !has_next;
 
-  // --- 4. UI Updates ---
-  // Note: For a true progress bar in Cluster Bomb, you need to calculate the total Cartesian product.
-  // We'll skip exact percentage calculation here for brevity and just show activity.
-  gtk_progress_bar_pulse(GTK_PROGRESS_BAR(gui_ctx.progress_bar));
+  const gdouble progress = (gdouble)campaign.sent_count / (gdouble)campaign.total_count;
+  gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(gui_ctx.progress_bar), MIN(progress, 1.0));
+  gchar progress_text[32];
+  snprintf(progress_text, sizeof(progress_text), "%.1f%%", MIN(progress, 1.0) * 100.0);
+  gtk_progress_bar_set_text(GTK_PROGRESS_BAR(gui_ctx.progress_bar), progress_text);
 
   if (attack_finished) {
-    campaign.running = FALSE;
-    g_free(campaign.current_indices);
-    g_free(campaign.max_items);
+    campaign_cleanup();
 
     gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(gui_ctx.progress_bar), 1.0);
     gtk_progress_bar_set_text(GTK_PROGRESS_BAR(gui_ctx.progress_bar), "100% - Complete");
     alert_show_dialog(GTK_WINDOW(window), ALERT_SUCCESS, "Fuzzer", "Cluster Bomb Complete!");
+    g_free(payload_label);
     return FALSE;
   }
 
+  g_free(payload_label);
   return TRUE;
 }
 
 static void intruder_gui_loading_dialog_destroy(GtkWidget *widget) {
+  (void)widget;
   if (campaign.running) {
     campaign.running = FALSE;
   }
-  gtk_widget_destroy(widget);
+  campaign_cleanup();
   gui_ctx.packet_viewer_window = NULL;
 }
 
 static void intruder_gui_loading_dialog(void) {
   gui_ctx.packet_viewer_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_title(GTK_WINDOW(gui_ctx.packet_viewer_window),
-    g_strdup_printf("Intruder - Fuzzer Attack"));
+  gtk_window_set_title(GTK_WINDOW(gui_ctx.packet_viewer_window), "Advanced Builder - Campaign");
   gtk_window_set_default_size(GTK_WINDOW(gui_ctx.packet_viewer_window), (int)(APPLICATION_MIN_WIDTH * 0.8), (int)(APPLICATION_MIN_HEIGHT * 0.8));
   gtk_window_set_position(GTK_WINDOW(gui_ctx.packet_viewer_window), GTK_WIN_POS_CENTER);
 
@@ -197,24 +354,24 @@ static void intruder_gui_loading_dialog(void) {
 
   g_signal_connect(gui_ctx.packet_viewer_window, "destroy", G_CALLBACK(intruder_gui_loading_dialog_destroy), NULL);
 
-  g_timeout_add((campaign.timeout * 1000), fuzzer_gui_progress_worker, gui_ctx.packet_viewer_window);
+  g_timeout_add((MAX(campaign.timeout, 1) * 1000), fuzzer_gui_progress_worker, gui_ctx.packet_viewer_window);
 
   gtk_widget_show_all(gui_ctx.packet_viewer_window);
 }
 
 static void on_start_attack(void) {
+  if (!app_state_server_get_state()) {
+    alert_show_dialog(GTK_WINDOW(gui_ctx.window), ALERT_ERROR, "Connection Error", "Python bridge is offline.");
+    return;
+  }
+
   if (g_list_length(marked_list) == 0) {
-    g_print("Error: No markers defined.\n");
+    alert_show_dialog(GTK_WINDOW(gui_ctx.window), ALERT_ERROR, "Advanced Builder", "Select one or more hex ranges and add markers before starting.");
     return;
   }
 
   const gint strategy = gtk_combo_box_get_active(GTK_COMBO_BOX(gui_ctx.combo_strategy));
-
-  if (strategy == 1) {
-    init_cluster_bomb();
-  } else {
-    // Sniper
-  }
+  init_campaign(strategy);
 
   campaign.running = TRUE;
   campaign.timeout = plugin_radio_get_delay();
@@ -356,9 +513,13 @@ static void intruder_gui_on_payload_clear(GtkWidget *button, gpointer user_data)
   gtk_window_set_position(GTK_WINDOW(dialog), GTK_WIN_POS_CENTER_ON_PARENT);
 
   if (gtk_dialog_run(GTK_DIALOG(dialog)) == GTK_RESPONSE_ACCEPT) {
+    const gint token_index = gtk_combo_box_get_active(GTK_COMBO_BOX(gui_ctx.combo_tokens));
+    advanced_marked_ctx_t *token = token_index >= 0 ? g_list_nth_data(marked_list, token_index) : NULL;
     gtk_list_store_clear(store);
-    g_list_free_full(gui_ctx.payload_list, g_free);
-    gui_ctx.payload_list = NULL;
+    if (token != NULL) {
+      g_list_free_full(token->data.payload_list, g_free);
+      token->data.payload_list = NULL;
+    }
   }
   gtk_widget_destroy(dialog);
 }
@@ -420,7 +581,7 @@ static GtkWidget *intruder_gui_number_range_create(void) {
 
   GtkAdjustment *adj_from = gtk_adjustment_new(0, 0, 1000000, 1, 10, 0);
   GtkAdjustment *adj_to = gtk_adjustment_new(0, 0, 1000000, 1, 10, 0);
-  GtkAdjustment *adj_steps = gtk_adjustment_new(0, 1, 1000000, 1, 10, 0);
+  GtkAdjustment *adj_steps = gtk_adjustment_new(1, 1, 1000000, 1, 10, 0);
 
   gui_ctx.numeric_from = gtk_spin_button_new(adj_from, 1, 0);
   gui_ctx.numeric_to = gtk_spin_button_new(adj_to, 1, 0);
@@ -503,9 +664,60 @@ static GtkWidget *intruder_gui_simple_list_create(void) {
   return main_vbox;
 }
 
+static void on_block_change(GtkWidget *widget, gpointer data) {
+  (void)widget;
+  (void)data;
+
+  const gint token_index = gtk_combo_box_get_active(GTK_COMBO_BOX(gui_ctx.combo_tokens));
+  if (token_index < 0) return;
+
+  advanced_marked_ctx_t *token = (advanced_marked_ctx_t *)g_list_nth_data(marked_list, token_index);
+  if (!token) return;
+
+  token->data.bof_length = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(gui_ctx.block_length));
+  token->data.bof_pattern_type = gtk_combo_box_get_active(GTK_COMBO_BOX(gui_ctx.block_pattern));
+}
+
+static void on_update_block_values(advanced_marked_ctx_t *token) {
+  g_signal_handlers_block_by_func(gui_ctx.block_length, (gpointer)on_block_change, NULL);
+  g_signal_handlers_block_by_func(gui_ctx.block_pattern, (gpointer)on_block_change, NULL);
+
+  gtk_spin_button_set_value(GTK_SPIN_BUTTON(gui_ctx.block_length), token->data.bof_length > 0 ? token->data.bof_length : 16);
+  gtk_combo_box_set_active(GTK_COMBO_BOX(gui_ctx.block_pattern), token->data.bof_pattern_type);
+
+  g_signal_handlers_unblock_by_func(gui_ctx.block_length, (gpointer)on_block_change, NULL);
+  g_signal_handlers_unblock_by_func(gui_ctx.block_pattern, (gpointer)on_block_change, NULL);
+}
+
+static GtkWidget *intruder_gui_character_blocks_create(void) {
+  GtkWidget *grid = gtk_grid_new();
+  gtk_grid_set_row_spacing(GTK_GRID(grid), 8);
+  gtk_grid_set_column_spacing(GTK_GRID(grid), 15);
+  gtk_container_set_border_width(GTK_CONTAINER(grid), 10);
+
+  GtkAdjustment *adj_length = gtk_adjustment_new(16, 1, 4096, 1, 16, 0);
+  gui_ctx.block_length = gtk_spin_button_new(adj_length, 1, 0);
+  gui_ctx.block_pattern = gtk_combo_box_text_new();
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(gui_ctx.block_pattern), "ASCII A (0x41)");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(gui_ctx.block_pattern), "NUL (0x00)");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(gui_ctx.block_pattern), "0xFF");
+  gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(gui_ctx.block_pattern), "Incrementing 00..FF");
+  gtk_combo_box_set_active(GTK_COMBO_BOX(gui_ctx.block_pattern), 0);
+
+  gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Length"), 0, 0, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), gui_ctx.block_length, 1, 0, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), gtk_label_new("Pattern"), 0, 1, 1, 1);
+  gtk_grid_attach(GTK_GRID(grid), gui_ctx.block_pattern, 1, 1, 1, 1);
+
+  g_signal_connect(gui_ctx.block_length, "value-changed", G_CALLBACK(on_block_change), NULL);
+  g_signal_connect(gui_ctx.block_pattern, "changed", G_CALLBACK(on_block_change), NULL);
+  return grid;
+}
+
 static void sync_token_widgets(advanced_marked_ctx_t *token) {
   if (!token) return;
 
+  if (token->attack_type < 0 || token->attack_type > 2) token->attack_type = 0;
   gtk_combo_box_set_active(GTK_COMBO_BOX(combo_gen), token->attack_type);
 
   const char *page_name[] = {"numeric_page", "list_page", "blocks_page"};
@@ -513,6 +725,7 @@ static void sync_token_widgets(advanced_marked_ctx_t *token) {
 
   on_update_numeric_values(token);
   on_update_payload_list_view(token);
+  on_update_block_values(token);
 }
 
 static void on_token_selection_changed(GtkComboBox *combo, gpointer data) {
@@ -527,6 +740,7 @@ static void on_token_selection_changed(GtkComboBox *combo, gpointer data) {
 static void on_combo_attack_change(GtkComboBox *combo, gpointer data) {
   (void)data;
   const gint attack_type = gtk_combo_box_get_active(combo);
+  if (attack_type < 0 || attack_type > 2) return;
   const gint token_index = gtk_combo_box_get_active(GTK_COMBO_BOX(gui_ctx.combo_tokens));
 
   if (token_index >= 0) {
@@ -541,6 +755,7 @@ static void update_token_id(void) {
   for (GList *l = marked_list; l != NULL; l = l->next) {
     advanced_marked_ctx_t *marker = (advanced_marked_ctx_t *)l->data;
     marker->id = counter + 1;
+    counter++;
   }
 }
 
@@ -579,7 +794,7 @@ static void on_clear_last_marker_clicked(void) {
     gtk_text_buffer_delete_mark(gui_ctx.template_buffer, mark_ctx->start_mark);
     gtk_text_buffer_delete_mark(gui_ctx.template_buffer, mark_ctx->end_mark);
 
-    g_free(mark_ctx);
+    free_token_context(mark_ctx);
     marked_list = g_list_delete_link(marked_list, last_node);
   }
   update_token_id();
@@ -590,7 +805,6 @@ static void on_clear_all_marker_clicked(void) {
   if (!gui_ctx.combo_tokens) { return; }
 
   GList *l = marked_list;
-  int i = 0;
   while (l != NULL) {
     advanced_marked_ctx_t *mark_ctx = (advanced_marked_ctx_t *)l->data;
 
@@ -598,17 +812,16 @@ static void on_clear_all_marker_clicked(void) {
     gtk_text_buffer_get_iter_at_mark(gui_ctx.template_buffer, &start, mark_ctx->start_mark);
     gtk_text_buffer_get_iter_at_mark(gui_ctx.template_buffer, &end, mark_ctx->end_mark);
 
-    char tag_name[32];
-    snprintf(tag_name, sizeof(tag_name), "token_tag_%d", i++);
-
-    gtk_text_buffer_remove_tag_by_name(gui_ctx.template_buffer, tag_name, &start, &end);
+    gtk_text_buffer_remove_tag(gui_ctx.template_buffer, mark_ctx->tag, &start, &end);
+    GtkTextTagTable *table = gtk_text_buffer_get_tag_table(gui_ctx.template_buffer);
+    gtk_text_tag_table_remove(table, mark_ctx->tag);
     gtk_text_buffer_delete_mark(gui_ctx.template_buffer, mark_ctx->start_mark);
     gtk_text_buffer_delete_mark(gui_ctx.template_buffer, mark_ctx->end_mark);
 
     l = l->next;
   }
 
-  g_list_free_full(marked_list, g_free);
+  g_list_free_full(marked_list, (GDestroyNotify)free_token_context);
   marked_list = NULL;
 
   on_update_token_combo();
@@ -624,6 +837,12 @@ static void on_add_marker_clicked(void) {
     advanced_marked_ctx_t *mark_ctx = g_new0(advanced_marked_ctx_t, 1);
     mark_ctx->id = (gint)current_id + 1;
     mark_ctx->color = color;
+    mark_ctx->attack_type = 0;
+    mark_ctx->data.numeric_from = 0;
+    mark_ctx->data.numeric_to = 0;
+    mark_ctx->data.numeric_step = 1;
+    mark_ctx->data.bof_length = 16;
+    mark_ctx->data.bof_pattern_type = 0;
 
     mark_ctx->tag = gtk_text_buffer_create_tag(gui_ctx.template_buffer, NULL,
                              "background", color,
@@ -720,7 +939,7 @@ static GtkWidget *create_template_layout_right(void) {
 
   gtk_stack_add_named(GTK_STACK(gui_ctx.attack_stack), intruder_gui_number_range_create(), "numeric_page");
   gtk_stack_add_named(GTK_STACK(gui_ctx.attack_stack), intruder_gui_simple_list_create(), "list_page");
-  gtk_stack_add_named(GTK_STACK(gui_ctx.attack_stack), gtk_label_new("I'm still working on it :P"), "blocks_page");
+  gtk_stack_add_named(GTK_STACK(gui_ctx.attack_stack), intruder_gui_character_blocks_create(), "blocks_page");
 
   gtk_box_pack_start(GTK_BOX(right_vbox), gui_ctx.attack_stack, TRUE, TRUE, 0);
 
@@ -744,18 +963,22 @@ static GtkWidget *create_template_page(void) {
   return split_layout;
 }
 
-static GtkWidget* create_status_area(void) {
-    GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 5);
-    gtk_container_set_border_width(GTK_CONTAINER(vbox), 10);
-
-    gui_ctx.progress_bar = gtk_progress_bar_new();
-    gtk_progress_bar_set_show_text(GTK_PROGRESS_BAR(gui_ctx.progress_bar), TRUE);
-    gtk_box_pack_start(GTK_BOX(vbox), gui_ctx.progress_bar, FALSE, FALSE, 0);
-
-    return vbox;
+static void generator_gui_destroy(GtkWidget *widget, gpointer user_data) {
+  (void)widget;
+  (void)user_data;
+  campaign_cleanup();
+  g_list_free_full(marked_list, (GDestroyNotify)free_token_context);
+  marked_list = NULL;
+  gui_ctx.window = NULL;
+  gui_ctx.packet_viewer_window = NULL;
 }
 
 void generator_gui_create(GtkWindow *parent) {
+  if (gui_ctx.window != NULL) {
+    gtk_window_present(GTK_WINDOW(gui_ctx.window));
+    return;
+  }
+
   gui_ctx.window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
   gtk_window_set_title(GTK_WINDOW(gui_ctx.window), "Advanced Campaign Builder");
   gtk_window_set_default_size(GTK_WINDOW(gui_ctx.window), (gint)(APPLICATION_MIN_WIDTH*0.8), (gint)(APPLICATION_MIN_HEIGHT*0.8));
@@ -764,12 +987,9 @@ void generator_gui_create(GtkWindow *parent) {
 
   GtkWidget *main_vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
   gtk_container_add(GTK_CONTAINER(gui_ctx.window), main_vbox);
+  g_signal_connect(gui_ctx.window, "destroy", G_CALLBACK(generator_gui_destroy), NULL);
 
   gtk_box_pack_start(GTK_BOX(main_vbox), create_template_page(), TRUE, TRUE, 0);
 
   gtk_widget_show_all(gui_ctx.window);
-  while (gtk_events_pending()) {
-    gtk_main_iteration();
-  }
 }
-

@@ -28,28 +28,26 @@ static GtkWidget *sender_instance = NULL;
 
 static void on_plugin_state_modified(void);
 static void packet_sender_on_send(void);
+static gboolean packet_sender_build_current_packet(proto_packet_t *packet);
+
+static uint16_t packet_sender_spp_total_size(const space_packet_t *spp_packet) {
+  return SPP_PRIMARY_HEADER_LEN + HOST_TO_BE16(spp_packet->header.length) + 1;
+}
+
+static void packet_sender_on_destroy(GtkWidget *widget, gpointer user_data) {
+  (void)widget;
+  (void)user_data;
+  sender_instance = NULL;
+}
 
 static void on_send_to_intruder(void) {
-  GtkTextIter start, end;
-  gtk_text_buffer_get_bounds(hexdump_ctx.hex_buffer, &start, &end);
-  const char *text = gtk_text_buffer_get_text(hexdump_ctx.hex_buffer, &start, &end, FALSE);
-
-  int payload_len = 0;
-  uint8_t *payload_raw = ascii_to_uint8_buffer(text, &payload_len);
-
-  space_packet_t *spp_packet = plugin_spp_build_packet(payload_raw, payload_len);
-  const uint16_t spp_payload_len = HOST_TO_BE16(spp_packet->header.length) + 1;
-  const uint16_t total_size = SPP_PRIMARY_HEADER_LEN + spp_payload_len;
-
-  if (total_size > sizeof(space_packet_t)) {
-    g_warning("Invalid packet size: %u", total_size);
+  proto_packet_t *packet = g_new0(proto_packet_t, 1);
+  if (!packet_sender_build_current_packet(packet)) {
+    g_free(packet);
     return;
   }
-  proto_packet_t *packet = g_new0(proto_packet_t, 1);
-  packet->length = total_size;
-  memccpy(packet->buffer, (uint8_t*)spp_packet, 0, total_size);
   intruder_inspect_packet(packet);
-  if (payload_raw) g_free(payload_raw);
+  g_free(packet);
 }
 
 static void on_sender_response(GtkDialog *dialog, gint response_id, gpointer user_data) {
@@ -90,18 +88,18 @@ static void packet_sender_gui_on_payload_change(GtkTextBuffer *buffer, gpointer 
   (void)user_data;
   GtkTextIter start, end;
   gtk_text_buffer_get_bounds(buffer, &start, &end);
-  const char *text = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
+  char *text = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
 
   int payload_len = 0;
-  uint8_t *payload_raw = ascii_to_uint8_buffer(text, &payload_len);
+  uint8_t *payload_raw = text_to_uint8_buffer(text, &payload_len);
 
   space_packet_t *spp_packet = plugin_spp_build_packet(payload_raw, payload_len);
 
-  const uint16_t spp_payload_len = HOST_TO_BE16(spp_packet->header.length);
-  const uint16_t total_size = SPP_PRIMARY_HEADER_LEN + spp_payload_len;
+  const uint16_t total_size = packet_sender_spp_total_size(spp_packet);
 
   if (total_size > sizeof(space_packet_t) || total_size < SPP_PRIMARY_HEADER_LEN) {
     g_warning("Invalid packet size: %u", total_size);
+    g_free(text);
     return;
   }
 
@@ -110,33 +108,43 @@ static void packet_sender_gui_on_payload_change(GtkTextBuffer *buffer, gpointer 
 
   g_string_free(hex_dump, TRUE);
   if (payload_raw) g_free(payload_raw);
-  while (gtk_events_pending()) {
-    gtk_main_iteration_do(FALSE);
-  }
+  g_free(text);
 }
 
 static void on_plugin_state_modified(void) {
   packet_sender_gui_on_payload_change(hexdump_ctx.hex_buffer, NULL);
 }
 
-static void packet_sender_on_send(void) {
+static gboolean packet_sender_build_current_packet(proto_packet_t *packet) {
   GtkTextIter start, end;
   gtk_text_buffer_get_bounds(hexdump_ctx.hex_buffer, &start, &end);
-  const char *text = gtk_text_buffer_get_text(hexdump_ctx.hex_buffer, &start, &end, FALSE);
+  char *text = gtk_text_buffer_get_text(hexdump_ctx.hex_buffer, &start, &end, FALSE);
 
   int payload_len = 0;
-  uint8_t *payload_raw = ascii_to_uint8_buffer(text, &payload_len);
+  uint8_t *payload_raw = text_to_uint8_buffer(text, &payload_len);
 
   space_packet_t *spp_packet = plugin_spp_build_packet(payload_raw, payload_len);
-  const uint16_t spp_payload_len = HOST_TO_BE16(spp_packet->header.length) + 1;
-  const uint16_t total_size = SPP_PRIMARY_HEADER_LEN + spp_payload_len;
+  const uint16_t total_size = packet_sender_spp_total_size(spp_packet);
 
   if (total_size > sizeof(space_packet_t)) {
     g_warning("Invalid packet size: %u", total_size);
-    return;
+    if (payload_raw) g_free(payload_raw);
+    g_free(text);
+    return FALSE;
   }
-  app_state_transmit_packet_with_config((uint8_t*)spp_packet, total_size);
+
+  packet->length = total_size;
+  memcpy(packet->buffer, (uint8_t *)spp_packet, total_size);
   if (payload_raw) g_free(payload_raw);
+  g_free(text);
+  return TRUE;
+}
+
+static void packet_sender_on_send(void) {
+  proto_packet_t packet = {0};
+  if (packet_sender_build_current_packet(&packet)) {
+    app_state_transmit_packet_with_config(packet.buffer, packet.length);
+  }
 }
 
 void packet_sender_dialog_create(GtkWidget *widget, gpointer data) {
@@ -243,8 +251,37 @@ void packet_sender_dialog_create(GtkWidget *widget, gpointer data) {
   gtk_box_pack_end(GTK_BOX(footer_layout), btn_add, FALSE, FALSE, 2);
 
   g_signal_connect(sender_instance, "response", G_CALLBACK(on_sender_response), statusbar);
-  g_signal_connect_swapped(parent_window, "destroy", G_CALLBACK(gtk_widget_destroy), sender_instance);
+  g_signal_connect(sender_instance, "destroy", G_CALLBACK(packet_sender_on_destroy), NULL);
+  if (parent_window != NULL) {
+    g_signal_connect_swapped(parent_window, "destroy", G_CALLBACK(gtk_widget_destroy), sender_instance);
+  }
   g_signal_connect(btn_add, "clicked", G_CALLBACK(on_send_to_intruder), NULL);
 
   gtk_widget_show_all(sender_instance);
+}
+
+void packet_sender_dialog_open_packet(proto_packet_t *packet) {
+  if (packet == NULL) return;
+
+  packet_sender_dialog_create(NULL, NULL);
+
+  space_packet_t space_packet;
+  if (spp_unpack_packet(&space_packet, packet->buffer, packet->length) == SPP_ERROR_NONE) {
+    plugin_spp_parse_packet(packet->buffer, packet->length);
+    const int payload_length = space_packet.header.length + 1;
+    char *payload_hex = uint8_buffer_to_hex_string(space_packet.data, payload_length);
+    if (payload_hex != NULL) {
+      gtk_text_buffer_set_text(hexdump_ctx.hex_buffer, payload_hex, -1);
+      g_free(payload_hex);
+    }
+  } else {
+    char *packet_hex = uint8_buffer_to_hex_string(packet->buffer, packet->length);
+    if (packet_hex != NULL) {
+      gtk_text_buffer_set_text(hexdump_ctx.hex_buffer, packet_hex, -1);
+      g_free(packet_hex);
+    }
+  }
+
+  packet_sender_gui_on_payload_change(hexdump_ctx.hex_buffer, NULL);
+  gtk_window_present(GTK_WINDOW(sender_instance));
 }

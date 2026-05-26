@@ -79,12 +79,13 @@ static int dissector_dissect(proto_packet_t *packet, GtkTreeIter *root, uint8_t 
   packet_details_add_field(&troot, buffer, "", 2, 3);
   packet_details_add_bitfield(&troot, space_packet.header.sequence, 2, fields_sequence_control, 2, 2, 3);
 
-  GtkTreeIter tpdata_field = packet_details_add_field(&troot, "Packer Data Field", "", 0, packet->length);
+  const uint16_t payload_len = space_packet.header.length + 1;
+  GtkTreeIter tpdata_field = packet_details_add_field(&troot, "Packet Data Field", "", 0, packet->length);
   snprintf(buffer, sizeof(buffer), "%s",
-             uint8_buffer_to_hex_string_separator(packet->buffer + 6, space_packet.header.length, ""));
+             uint8_buffer_to_hex_string_separator(packet->buffer + 6, payload_len, ""));
   packet_details_add_field(&tpdata_field, "Payload:", buffer, 6, packet->length);
 
-  sprintf(buffer, "[Length: %u bytes]", space_packet.header.length);
+  sprintf(buffer, "[Length: %u bytes]", payload_len);
   packet_details_add_field(&tpdata_field, buffer, "", 4, 5);
   return packet->length;
 }

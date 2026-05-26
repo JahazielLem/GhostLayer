@@ -12,6 +12,7 @@
  */
 
 #include "main_gui.h"
+#include "app_state.h"
 
 enum {
   COLUMN_INDEX = 0,
@@ -38,7 +39,7 @@ static void packet_viewer_on_row_select(GtkTreeSelection *selection, gpointer us
     gint index;
     gtk_tree_model_get(model, &iter, COLUMN_INDEX, &index, -1);
     proto_packet_t *pkt = g_list_nth_data(list_packet_buffer, index);
-    if (pkt) {
+    if (pkt && packet_viewer_selected_cb != NULL) {
       packet_viewer_selected_cb(pkt);
     }
   }
@@ -58,6 +59,40 @@ static void on_send_to_intruder(GtkMenuItem *item, gpointer user_data) {
     if (pkt) {
       g_print("Proto\n");
       intruder_inspect_packet(pkt);
+    }
+  }
+}
+
+static void on_send_to_packet_sender(GtkMenuItem *item, gpointer user_data) {
+  (void)item;
+  GtkWidget *treeview = GTK_WIDGET(user_data);
+  GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
+  GtkTreeModel *model;
+  GtkTreeIter iter;
+
+  if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
+    gint index;
+    gtk_tree_model_get(model, &iter, COLUMN_INDEX, &index, -1);
+    proto_packet_t *pkt = g_list_nth_data(list_packet_buffer, index);
+    if (pkt) {
+      packet_sender_dialog_open_packet(pkt);
+    }
+  }
+}
+
+static void on_transmit_once(GtkMenuItem *item, gpointer user_data) {
+  (void)item;
+  GtkWidget *treeview = GTK_WIDGET(user_data);
+  GtkTreeSelection *selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(treeview));
+  GtkTreeModel *model;
+  GtkTreeIter iter;
+
+  if (gtk_tree_selection_get_selected(selection, &model, &iter)) {
+    gint index;
+    gtk_tree_model_get(model, &iter, COLUMN_INDEX, &index, -1);
+    proto_packet_t *pkt = g_list_nth_data(list_packet_buffer, index);
+    if (pkt) {
+      app_state_transmit_packet_with_config(pkt->buffer, pkt->length);
     }
   }
 }
@@ -118,16 +153,22 @@ static gboolean packet_viewer_on_button_press(GtkWidget *treeview, GdkEventButto
       GtkWidget *menu_copy_hex = gtk_menu_item_new_with_label("Copy Hex Data");
       GtkWidget *menu_copy_hexdump = gtk_menu_item_new_with_label("Copy Hexdump Data");
       GtkWidget *separator = gtk_separator_menu_item_new();
+      GtkWidget *menu_packet_sender = gtk_menu_item_new_with_label("Open in Packet Sender");
       GtkWidget *menu_intruder = gtk_menu_item_new_with_label("Send to Intruder");
+      GtkWidget *menu_transmit_once = gtk_menu_item_new_with_label("Transmit Selected Once");
 
       gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_copy_hex);
       gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_copy_hexdump);
       gtk_menu_shell_append(GTK_MENU_SHELL(menu), separator);
+      gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_packet_sender);
       gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_intruder);
+      gtk_menu_shell_append(GTK_MENU_SHELL(menu), menu_transmit_once);
 
       g_signal_connect(menu_copy_hex, "activate", G_CALLBACK(on_menu_copy_hex_data), treeview);
       g_signal_connect(menu_copy_hexdump, "activate", G_CALLBACK(on_menu_copy_hexdump_data), treeview);
+      g_signal_connect(menu_packet_sender, "activate", G_CALLBACK(on_send_to_packet_sender), treeview);
       g_signal_connect(menu_intruder, "activate", G_CALLBACK(on_send_to_intruder), treeview);
+      g_signal_connect(menu_transmit_once, "activate", G_CALLBACK(on_transmit_once), treeview);
 
       gtk_widget_show_all(menu);
       gtk_menu_popup_at_pointer(GTK_MENU(menu), (GdkEvent *) event);

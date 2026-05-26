@@ -87,14 +87,13 @@ void app_state_transmit_packet(void) {
 
   buffer[offset++] = 0x64;
   buffer[offset++] = 0x69;
-  buffer[offset++] = '\0';
 
   bridge_engine_send(buffer, offset);
 }
 
 void app_state_transmit_packet_with_config(uint8_t *payload, uint16_t payload_length) {
   int offset = 0;
-  uint8_t buffer[(13 + 2 + payload_length)];
+  uint8_t buffer[(14 + payload_length)];
 
   radio_config.frequency = plugin_radio_get_frequency();
   radio_config.bandwidth = plugin_radio_get_bandwidth();
@@ -123,7 +122,6 @@ void app_state_transmit_packet_with_config(uint8_t *payload, uint16_t payload_le
   /* Tail */
   buffer[offset++] = 0x64;
   buffer[offset++] = 0x69;
-  buffer[offset++] = '\0';
 
   bridge_engine_send(buffer, offset);
 }

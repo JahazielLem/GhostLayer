@@ -43,13 +43,19 @@ static void intruder_gui_on_payload_change(GtkTextBuffer *buffer, gpointer user_
   (void)user_data;
   GtkTextIter start, end;
   gtk_text_buffer_get_bounds(buffer, &start, &end);
-  const char *text = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
+  char *text = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
   if (text == NULL || strlen(text) == 0){
     space_packet_t *space_packet = plugin_spp_build_packet(NULL, 0);
-    if (space_packet == NULL) { return; }
-    intruder_gui_hexeditor_update((uint8_t*)space_packet, space_packet->header.length + SPP_PRIMARY_HEADER_LEN);
+    if (space_packet == NULL) {
+      g_free(text);
+      return;
+    }
+    const uint16_t total_size = SPP_PRIMARY_HEADER_LEN + HOST_TO_BE16(space_packet->header.length) + 1;
+    intruder_gui_hexeditor_update((uint8_t*)space_packet, total_size);
+    g_free(text);
     return;
   }
+  g_free(text);
 }
 
 static void intruder_gui_on_reset(void) {
@@ -63,6 +69,11 @@ static void intruder_gui_on_reset(void) {
 static void intruder_gui_on_copy_token(void) {
   GtkClipboard *clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
   gtk_clipboard_set_text(clipboard, FUZZER_TOKEN, -1);
+}
+
+static void intruder_gui_on_insert_token(void) {
+  GtkTextBuffer *buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(hex_editor));
+  gtk_text_buffer_insert_at_cursor(buffer, FUZZER_TOKEN, -1);
 }
 
 static void intruder_gui_on_send(void) {
@@ -176,7 +187,7 @@ static void intruder_gui_on_payload_add(GtkWidget *button, gpointer user_data) {
   GtkListStore *store = GTK_LIST_STORE(user_data);
 
   const gchar *payload = gtk_entry_get_text(GTK_ENTRY(entry_add));
-  if (payload) {
+  if (payload && strlen(payload) > 0) {
     gtk_list_store_append(store, &iter);
     gtk_list_store_set(store, &iter, 0, payload, -1);
     gtk_entry_set_text(GTK_ENTRY(entry_add), "");
@@ -355,12 +366,14 @@ static void intruder_gui_layout_left_panel(GtkWidget *split_layout) {
   char buffer[64];
   snprintf(buffer, sizeof(buffer), "Copy Token %s", FUZZER_TOKEN);
   GtkWidget *copy_token_button = gtk_button_new_with_label(buffer);
+  GtkWidget *insert_token_button = gtk_button_new_with_label("Insert Token");
 
   GtkWidget *send_button = gtk_button_new_with_label("Send");
   GtkWidget *spacer = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_widget_set_hexpand(spacer, TRUE);
 
   gtk_box_pack_start(GTK_BOX(top_hbox), reset_button, FALSE, FALSE, 0);
+  gtk_box_pack_start(GTK_BOX(top_hbox), insert_token_button, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(top_hbox), copy_token_button, FALSE, FALSE, 0);
   gtk_box_pack_start(GTK_BOX(top_hbox), spacer, TRUE, TRUE, 0);
   gtk_box_pack_start(GTK_BOX(top_hbox), send_button, FALSE, FALSE, 0);
@@ -392,6 +405,7 @@ static void intruder_gui_layout_left_panel(GtkWidget *split_layout) {
   gtk_paned_pack1(GTK_PANED(split_layout), left_vbox, TRUE, FALSE);
 
   g_signal_connect(reset_button, "clicked", G_CALLBACK(intruder_gui_on_reset), NULL);
+  g_signal_connect(insert_token_button, "clicked", G_CALLBACK(intruder_gui_on_insert_token), NULL);
   g_signal_connect(copy_token_button, "clicked", G_CALLBACK(intruder_gui_on_copy_token), NULL);
   g_signal_connect(send_button, "clicked", G_CALLBACK(intruder_gui_on_send), NULL);
 }
@@ -478,9 +492,6 @@ void intruder_gui_create(void) {
 
   intruder_gui_on_payload_change(hex_buffer, NULL);
 
-  while (gtk_events_pending()) {
-    gtk_main_iteration();
-  }
 }
 
 GtkWidget *intruder_gui_get_instance(void) { return intruder_window; }
@@ -521,5 +532,4 @@ GList *intruder_gui_get_payload_list(void) {
   }
   return list;
 }
-
 

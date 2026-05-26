@@ -41,6 +41,33 @@ static GtkWidget *packet_viewer_window = NULL;
 static GtkWidget *progress_bar = NULL;
 static proto_packet_t *context_packet;
 
+static uint8_t *intruder_get_editor_payload(int *payload_len) {
+  *payload_len = 0;
+  char *text = intruder_gui_get_data();
+  if (text == NULL) return NULL;
+
+  int raw_len = 0;
+  uint8_t *raw_packet = hex_string_to_uint8_buffer_token(text, &raw_len);
+  g_free(text);
+
+  if (raw_packet == NULL || raw_len <= 0) {
+    return raw_packet;
+  }
+
+  space_packet_t unpacked_packet;
+  if (spp_unpack_packet(&unpacked_packet, raw_packet, raw_len) == SPP_ERROR_NONE) {
+    const int data_len = unpacked_packet.header.length + 1;
+    uint8_t *payload = g_malloc(data_len);
+    memcpy(payload, unpacked_packet.data, data_len);
+    g_free(raw_packet);
+    *payload_len = data_len;
+    return payload;
+  }
+
+  *payload_len = raw_len;
+  return raw_packet;
+}
+
 static void intruder_fuzzer_cleanup(void) {
   if (intruder_fuzz_ctx.base_payload) {
     g_free(intruder_fuzz_ctx.base_payload);
@@ -92,8 +119,7 @@ static void intruder_setup_discovery_attack(void) {
   intruder_fuzz_ctx.current = intruder_fuzz_ctx.from;
   intruder_fuzz_ctx.timeout = plugin_radio_get_delay();
 
-  const char *text = intruder_gui_get_data();
-  intruder_fuzz_ctx.base_payload = ascii_to_uint8_buffer(text, &intruder_fuzz_ctx.base_payload_len);
+  intruder_fuzz_ctx.base_payload = intruder_get_editor_payload(&intruder_fuzz_ctx.base_payload_len);
 
   memset(&intruder_fuzz_ctx.spp_context, 0, sizeof(spp_apid_context_t));
   intruder_fuzz_ctx.spp_context.tm = plugin_spp_get_seq_counter();
@@ -112,8 +138,7 @@ static void intruder_setup_exhaustion_attack(void) {
   intruder_fuzz_ctx.current = intruder_fuzz_ctx.from;
   intruder_fuzz_ctx.timeout = plugin_radio_get_delay();
 
-  const char *text = intruder_gui_get_data();
-  intruder_fuzz_ctx.base_payload = ascii_to_uint8_buffer(text, &intruder_fuzz_ctx.base_payload_len);
+  intruder_fuzz_ctx.base_payload = intruder_get_editor_payload(&intruder_fuzz_ctx.base_payload_len);
 
   memset(&intruder_fuzz_ctx.spp_context, 0, sizeof(spp_apid_context_t));
   intruder_fuzz_ctx.spp_context.apid = (uint16_t)plugin_spp_get_apid();
@@ -185,7 +210,7 @@ static gboolean fuzzer_gui_progress_worker(gpointer user_data) {
       gchar *payload_text = (gchar *)intruder_fuzz_ctx.current_node->data;
 
       int new_payload_len = 0;
-      uint8_t *new_buffer = ascii_to_uint8_buffer(payload_text, &new_payload_len);
+      uint8_t *new_buffer = text_to_uint8_buffer(payload_text, &new_payload_len);
 
       fuzzer_gui_packet_viewer_add_list_payload(payload_text, new_buffer, new_payload_len);
       intruder_build_packet_to_send(new_buffer, new_payload_len, &intruder_fuzz_ctx.spp_context);
@@ -218,19 +243,17 @@ static gboolean fuzzer_gui_progress_worker(gpointer user_data) {
 }
 
 static void intruder_gui_loading_dialog_destroy(GtkWidget *widget) {
-  // TODO: ADD CONFIRMATION
+  (void)widget;
   if (intruder_fuzz_ctx.running) {
     intruder_fuzz_ctx.running = FALSE;
   }
   intruder_fuzzer_cleanup();
-  gtk_widget_destroy(widget);
   packet_viewer_window = NULL;
 }
 
 static void intruder_gui_loading_dialog(void) {
   packet_viewer_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-  gtk_window_set_title(GTK_WINDOW(packet_viewer_window),
-    g_strdup_printf("Intruder - Fuzzer Attack"));
+  gtk_window_set_title(GTK_WINDOW(packet_viewer_window), "Intruder - Fuzzer Attack");
   gtk_window_set_default_size(GTK_WINDOW(packet_viewer_window), (int)(APPLICATION_MIN_WIDTH * 0.8), (int)(APPLICATION_MIN_HEIGHT * 0.8));
   gtk_window_set_position(GTK_WINDOW(packet_viewer_window), GTK_WIN_POS_CENTER);
 
@@ -245,7 +268,7 @@ static void intruder_gui_loading_dialog(void) {
 
   g_signal_connect(packet_viewer_window, "destroy", G_CALLBACK(intruder_gui_loading_dialog_destroy), NULL);
 
-  g_timeout_add((intruder_fuzz_ctx.timeout * 1000), fuzzer_gui_progress_worker, packet_viewer_window);
+  g_timeout_add((MAX(intruder_fuzz_ctx.timeout, 1) * 1000), fuzzer_gui_progress_worker, packet_viewer_window);
 
   gtk_widget_show_all(packet_viewer_window);
 }
@@ -276,6 +299,9 @@ void intruder_inspect_packet(proto_packet_t *packet) {
     intruder_gui_create();
   }
 
+  if (context_packet != NULL) {
+    g_free(context_packet);
+  }
   context_packet = g_new0(proto_packet_t, 1);
   memcpy(context_packet->buffer, packet->buffer, packet->length);
   context_packet->length = packet->length;
