@@ -25,7 +25,7 @@ enum {
 static GtkTreeStore *treestore = NULL;
 static GtkWidget *treeview = NULL;
 
-static const char *txt_color = "#11111b";
+static const char *txt_color = "#cdd6f4";
 
 static void packet_details_on_selection(GtkTreeView *tree, gpointer user_data) {
   (void)user_data;
@@ -60,9 +60,11 @@ GtkWidget *packet_details_create(void) {
   treestore = gtk_tree_store_new(COLUMN_COUNT, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_INT,
                                  G_TYPE_INT);
   treeview = gtk_tree_view_new_with_model(GTK_TREE_MODEL(treestore));
+  gtk_widget_set_name(treeview, "packet_details_tree");
   g_object_ref(treestore);
 
   GtkCellRenderer *renderer = gtk_cell_renderer_text_new();
+  g_object_set(renderer, "family", "monospace", NULL);
 
   GtkTreeViewColumn *col_name =
       gtk_tree_view_column_new_with_attributes("", renderer, "text", COLUMN_FIELD_NAME, "cell-background",
@@ -77,7 +79,7 @@ GtkWidget *packet_details_create(void) {
 GtkTreeIter packet_details_add_field(GtkTreeIter *parent, const char *name, const char *value, const int start,
                                      const int end) {
   GtkTreeIter iter;
-  const char *bg_color = (parent == NULL) ? "#dce0e8" : "#ccd0da";
+  const char *bg_color = (parent == NULL) ? "#313244" : "#181825";
   char buffer[512];
   sprintf(buffer, "%s %s", name, value);
 
@@ -90,7 +92,7 @@ GtkTreeIter packet_details_add_field(GtkTreeIter *parent, const char *name, cons
 GtkTreeIter packet_details_add_bitfield(GtkTreeIter *parent, uint32_t buffer, int total_bytes, bitfield_t *fields,
                                         int num_fields, const int start, const int end) {
   GtkTreeIter iter;
-  const char *bg_color = (parent == NULL) ? "#dce0e8" : "#ccd0da";
+  const char *bg_color = (parent == NULL) ? "#313244" : "#181825";
   char *value = bitfield_string(buffer, total_bytes, fields, num_fields);
   if (value == NULL) {
     value = "[Error with bitfield]";
